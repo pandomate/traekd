@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traefik Config Manager</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="/css/modal.css">
+    <link rel="stylesheet" href="/css/middleware.css">
+    <link rel="stylesheet" href="/css/routers.css">
+    <link rel="stylesheet" href="/css/editor.css">
+    <link rel="stylesheet" href="/css/delete.css">
+</head>
+<body>
+    <!-- Single Mobile Menu Toggle Button - transforms between hamburger and X -->
+    <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+        <div class="menu-icon">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
+    </button>
+    
+    <div class="layout">
+        <!-- Left Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">◈</div>
+                <div class="brand-text">
+                    <span class="brand-name" id="site-title">Traefik</span>
+                    <span class="brand-sub">Config Manager</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <button class="nav-item active" data-view="overview">
+                        <span class="nav-icon">◉</span>
+                        <span class="nav-label">Overview</span>
+                    </button>
+                </div>
+
+                <!-- HTTP Section -->
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <span class="protocol-badge http">HTTP</span>
+                        <button class="nav-add-btn" data-protocol="http" title="Add HTTP item">+</button>
+                    </div>
+                    <button class="nav-item" data-view="http-routers">
+                        <span class="nav-icon nav-router">●</span>
+                        <span class="nav-label">Routers</span>
+                        <span class="nav-badge" id="nav-http-router-count">0</span>
+                    </button>
+                    <button class="nav-item" data-view="http-middlewares">
+                        <span class="nav-icon nav-middleware">●</span>
+                        <span class="nav-label">Middlewares</span>
+                        <span class="nav-badge" id="nav-http-middleware-count">0</span>
+                    </button>
+                    <button class="nav-item" data-view="http-services">
+                        <span class="nav-icon nav-service">●</span>
+                        <span class="nav-label">Services</span>
+                        <span class="nav-badge" id="nav-http-service-count">0</span>
+                    </button>
+                </div>
+
+                <!-- TCP Section -->
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <span class="protocol-badge tcp">TCP</span>
+                        <button class="nav-add-btn" data-protocol="tcp" title="Add TCP item">+</button>
+                    </div>
+                    <button class="nav-item" data-view="tcp-routers">
+                        <span class="nav-icon nav-router">●</span>
+                        <span class="nav-label">Routers</span>
+                        <span class="nav-badge" id="nav-tcp-router-count">0</span>
+                    </button>
+                    <button class="nav-item" data-view="tcp-middlewares">
+                        <span class="nav-icon nav-middleware">●</span>
+                        <span class="nav-label">Middlewares</span>
+                        <span class="nav-badge" id="nav-tcp-middleware-count">0</span>
+                    </button>
+                    <button class="nav-item" data-view="tcp-services">
+                        <span class="nav-icon nav-service">●</span>
+                        <span class="nav-label">Services</span>
+                        <span class="nav-badge" id="nav-tcp-service-count">0</span>
+                    </button>
+                </div>
+
+                <!-- UDP Section -->
+                <div class="nav-section">
+                    <div class="nav-section-title">
+                        <span class="protocol-badge udp">UDP</span>
+                        <button class="nav-add-btn" data-protocol="udp" title="Add UDP item">+</button>
+                    </div>
+                    <button class="nav-item" data-view="udp-routers">
+                        <span class="nav-icon nav-router">●</span>
+                        <span class="nav-label">Routers</span>
+                        <span class="nav-badge" id="nav-udp-router-count">0</span>
+                    </button>
+                    <button class="nav-item" data-view="udp-services">
+                        <span class="nav-icon nav-service">●</span>
+                        <span class="nav-label">Services</span>
+                        <span class="nav-badge" id="nav-udp-service-count">0</span>
+                    </button>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">View</div>
+                    <button class="nav-item" data-view="yaml">
+                        <span class="nav-icon">{ }</span>
+                        <span class="nav-label">Raw YAML</span>
+                    </button>
+                    <button class="nav-item" data-view="entry-points">
+                        <span class="nav-icon">◎</span>
+                        <span class="nav-label">Entry Points</span>
+                        <span class="nav-badge" id="nav-entry-point-count">0</span>
+                    </button>
+                    <button class="nav-item" data-view="cert-resolvers">
+                        <span class="nav-icon">☁</span>
+                        <span class="nav-label">Certificate Resolvers</span>
+                        <span class="nav-badge" id="nav-cert-resolver-count">0</span>
+                    </button>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-section-title">System</div>
+                    <button class="nav-item" data-view="settings">
+                        <span class="nav-icon">⚙</span>
+                        <span class="nav-label">Settings</span>
+                    </button>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="config-path" id="config-path">/etc/traefik/config.yml</div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Overview View -->
+            <section id="view-overview" class="view active">
+                <header class="view-header">
+                    <h1>Overview</h1>
+                    <p class="view-desc">Your Traefik configuration at a glance</p>
+                </header>
+
+                <!-- Protocol Summary Cards -->
+                <div class="protocol-cards">
+                    <!-- HTTP Card -->
+                    <div class="protocol-card http">
+                        <div class="protocol-card-header">
+                            <span class="protocol-icon">🌐</span>
+                            <span class="protocol-badge http">HTTP</span>
+                        </div>
+                        <div class="protocol-card-stats">
+                            <div class="protocol-stat">
+                                <span class="protocol-stat-dot router"></span>
+                                <span class="protocol-stat-value" id="http-router-count">0</span>
+                                <span class="protocol-stat-label">Routers</span>
+                            </div>
+                            <div class="protocol-stat">
+                                <span class="protocol-stat-dot middleware"></span>
+                                <span class="protocol-stat-value" id="http-middleware-count">0</span>
+                                <span class="protocol-stat-label">Middlewares</span>
+                            </div>
+                            <div class="protocol-stat">
+                                <span class="protocol-stat-dot service"></span>
+                                <span class="protocol-stat-value" id="http-service-count">0</span>
+                                <span class="protocol-stat-label">Services</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TCP Card -->
+                    <div class="protocol-card tcp">
+                        <div class="protocol-card-header">
+                            <span class="protocol-icon">🔌</span>
+                            <span class="protocol-badge tcp">TCP</span>
+                        </div>
+                        <div class="protocol-card-stats">
+                            <div class="protocol-stat">
+                                <span class="protocol-stat-dot router"></span>
+                                <span class="protocol-stat-value" id="tcp-router-count">0</span>
+                                <span class="protocol-stat-label">Routers</span>
+                            </div>
+                            <div class="protocol-stat">
+                                <span class="protocol-stat-dot middleware"></span>
+                                <span class="protocol-stat-value" id="tcp-middleware-count">0</span>
+                                <span class="protocol-stat-label">Middlewares</span>
+                            </div>
+                            <div class="protocol-stat">
+                                <span class="protocol-stat-dot service"></span>
+                                <span class="protocol-stat-value" id="tcp-service-count">0</span>
+                                <span class="protocol-stat-label">Services</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- UDP Card -->
+                    <div class="protocol-card udp">
+                        <div class="protocol-card-header">
+                            <span class="protocol-icon">📡</span>
+                            <span class="protocol-badge udp">UDP</span>
+                        </div>
+                        <div class="protocol-card-stats">
+                            <div class="protocol-stat">
+                                <span class="protocol-stat-dot router"></span>
+                                <span class="protocol-stat-value" id="udp-router-count">0</span>
+                                <span class="protocol-stat-label">Routers</span>
+                            </div>
+                            <div class="protocol-stat">
+                                <span class="protocol-stat-dot service"></span>
+                                <span class="protocol-stat-value" id="udp-service-count">0</span>
+                                <span class="protocol-stat-label">Services</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HTTP Flow -->
+                <div class="overview-section" id="http-flow-section">
+                    <div class="section-header">
+                        <h2><span class="protocol-badge http">HTTP</span> Request Flow</h2>
+                        <div class="section-controls">
+                            <div class="filter-group">
+                                <span class="filter-label">Sort:</span>
+                                <button class="filter-btn" data-protocol="http" data-sort="name-asc">A-Z</button>
+                                <button class="filter-btn" data-protocol="http" data-sort="name-desc">Z-A</button>
+                                <button class="filter-btn" data-protocol="http" data-sort="ip-asc">IP ↑</button>
+                                <button class="filter-btn" data-protocol="http" data-sort="ip-desc">IP ↓</button>
+                            </div>
+                            <div class="search-box">
+                                <span class="search-icon">⌕</span>
+                                <input type="text" class="search-input" id="http-search" placeholder="Search routers..." maxlength="50" autocomplete="off">
+                                <button class="search-clear" type="button" title="Clear search">×</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="search-info" id="http-search-info"></div>
+                    <div class="flow-diagram" id="http-flow-diagram"></div>
+                </div>
+
+                <!-- TCP Flow - same structure -->
+                <div class="overview-section" id="tcp-flow-section">
+                    <div class="section-header">
+                        <h2><span class="protocol-badge tcp">TCP</span> Connection Flow</h2>
+                        <div class="section-controls">
+                            <div class="filter-group">
+                                <span class="filter-label">Sort:</span>
+                                <button class="filter-btn" data-protocol="tcp" data-sort="name-asc">A-Z</button>
+                                <button class="filter-btn" data-protocol="tcp" data-sort="name-desc">Z-A</button>
+                                <button class="filter-btn" data-protocol="tcp" data-sort="ip-asc">IP ↑</button>
+                                <button class="filter-btn" data-protocol="tcp" data-sort="ip-desc">IP ↓</button>
+                            </div>
+                            <div class="search-box">
+                                <span class="search-icon">⌕</span>
+                                <input type="text" class="search-input" id="tcp-search" placeholder="Search routers..." maxlength="50" autocomplete="off">
+                                <button class="search-clear" type="button" title="Clear search">×</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="search-info" id="tcp-search-info"></div>
+                    <div class="flow-diagram" id="tcp-flow-diagram"></div>
+                </div>
+
+                <!-- UDP Flow - same structure -->
+                <div class="overview-section" id="udp-flow-section">
+                    <div class="section-header">
+                        <h2><span class="protocol-badge udp">UDP</span> Datagram Flow</h2>
+                        <div class="section-controls">
+                            <div class="filter-group">
+                                <span class="filter-label">Sort:</span>
+                                <button class="filter-btn" data-protocol="udp" data-sort="name-asc">A-Z</button>
+                                <button class="filter-btn" data-protocol="udp" data-sort="name-desc">Z-A</button>
+                                <button class="filter-btn" data-protocol="udp" data-sort="ip-asc">IP ↑</button>
+                                <button class="filter-btn" data-protocol="udp" data-sort="ip-desc">IP ↓</button>
+                            </div>
+                            <div class="search-box">
+                                <span class="search-icon">⌕</span>
+                                <input type="text" class="search-input" id="udp-search" placeholder="Search routers..." maxlength="50" autocomplete="off">
+                                <button class="search-clear" type="button" title="Clear search">×</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="search-info" id="udp-search-info"></div>
+                    <div class="flow-diagram" id="udp-flow-diagram"></div>
+                </div>
+
+                <div class="overview-section" id="entry-points-overview-section">
+                    <div class="section-header">
+                        <h2>Entry Points</h2>
+                    </div>
+                    <div id="entry-points-overview"></div>
+                </div>
+
+                <div class="overview-section" id="cert-resolvers-overview-section">
+                    <div class="section-header">
+                        <h2>Certificate Resolvers</h2>
+                    </div>
+                    <div id="cert-resolvers-overview"></div>
+                </div>
+            </section>
+
+            <!-- HTTP Routers View -->
+            <section id="view-http-routers" class="view">
+                <header class="view-header">
+                    <div class="view-header-row">
+                        <h1><span class="protocol-badge http">HTTP</span> Routers</h1>
+                        <div class="view-controls">
+                            <div class="filter-group">
+                                <span class="filter-label">Sort:</span>
+                                <button class="filter-btn section-filter" data-protocol="http" data-type="routers" data-sort="name-asc">A-Z</button>
+                                <button class="filter-btn section-filter" data-protocol="http" data-type="routers" data-sort="name-desc">Z-A</button>
+                            </div>
+                            <div class="search-box view-search">
+                                <span class="search-icon">⌕</span>
+                                <input type="text" class="search-input section-search" data-protocol="http" data-type="routers" placeholder="Search routers..." maxlength="50" autocomplete="off">
+                                <button class="search-clear" type="button" title="Clear search">×</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="view-desc">Route incoming HTTP requests to services</p>
+                    <div class="search-info" id="http-routers-search-info"></div>
+                </header>
+                <div class="items-grid" id="http-routers-grid"></div>
+            </section>
+
+            <!-- HTTP Middlewares View -->
+            <section id="view-http-middlewares" class="view">
+                <header class="view-header">
+                    <div class="view-header-row">
+                        <h1><span class="protocol-badge http">HTTP</span> Middlewares</h1>
+                        <div class="view-controls">
+                            <div class="filter-group">
+                                <span class="filter-label">Sort:</span>
+                                <button class="filter-btn section-filter" data-protocol="http" data-type="middlewares" data-sort="name-asc">A-Z</button>
+                                <button class="filter-btn section-filter" data-protocol="http" data-type="middlewares" data-sort="name-desc">Z-A</button>
+                            </div>
+                            <div class="search-box view-search">
+                                <span class="search-icon">⌕</span>
+                                <input type="text" class="search-input section-search" data-protocol="http" data-type="middlewares" placeholder="Search middlewares..." maxlength="50" autocomplete="off">
+                                <button class="search-clear" type="button" title="Clear search">×</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="view-desc">Transform HTTP requests before they reach services</p>
+                    <div class="search-info" id="http-middlewares-search-info"></div>
+                </header>
+                <div class="items-grid" id="http-middlewares-grid"></div>
+            </section>
+
+            <!-- HTTP Services View -->
+            <section id="view-http-services" class="view">
+                <header class="view-header">
+                    <div class="view-header-row">
+                        <h1><span class="protocol-badge http">HTTP</span> Services</h1>
+                        <div class="view-controls">
+                            <div class="filter-group">
+                                <span class="filter-label">Sort:</span>
+                                <button class="filter-btn section-filter" data-protocol="http" data-type="services" data-sort="name-asc">A-Z</button>
+                                <button class="filter-btn section-filter" data-protocol="http" data-type="services" data-sort="name-desc">Z-A</button>
+                                <button class="filter-btn section-filter" data-protocol="http" data-type="services" data-sort="ip-asc">IP ↑</button>
+                                <button class="filter-btn section-filter" data-protocol="http" data-type="services" data-sort="ip-desc">IP ↓</button>
+                            </div>
+                            <div class="search-box view-search">
+                                <span class="search-icon">⌕</span>
+                                <input type="text" class="search-input section-search" data-protocol="http" data-type="services" placeholder="Search services..." maxlength="50" autocomplete="off">
+                                <button class="search-clear" type="button" title="Clear search">×</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="view-desc">Backend servers that handle HTTP requests</p>
+                    <div class="search-info" id="http-services-search-info"></div>
+                </header>
+                <div class="items-grid" id="http-services-grid"></div>
+            </section>
+
+            <!-- TCP Routers View -->
+            <section id="view-tcp-routers" class="view">
+                <header class="view-header">
+                    <div class="view-header-row">
+                        <h1><span class="protocol-badge tcp">TCP</span> Routers</h1>
+                        <div class="view-controls">
+                            <div class="filter-group">
+                                <span class="filter-label">Sort:</span>
+                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="routers" data-sort="name-asc">A-Z</button>
+                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="routers" data-sort="name-desc">Z-A</button>
+                            </div>
+                            <div class="search-box view-search">
+                                <span class="search-icon">⌕</span>
+                                <input type="text" class="search-input section-search" data-protocol="tcp" data-type="routers" placeholder="Search routers..." maxlength="50" autocomplete="off">
+                                <button class="search-clear" type="button" title="Clear search">×</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="view-desc">Route incoming TCP connections to services</p>
+                    <div class="search-info" id="tcp-routers-search-info"></div>
+                </header>
+                <div class="items-grid" id="tcp-routers-grid"></div>
+            </section>
+
+            <!-- TCP Middlewares View -->
+            <section id="view-tcp-middlewares" class="view">
+                <header class="view-header">
+                    <div class="view-header-row">
+                        <h1><span class="protocol-badge tcp">TCP</span> Middlewares</h1>
+                        <div class="view-controls">
+                            <div class="filter-group">
+                                <span class="filter-label">Sort:</span>
+                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="middlewares" data-sort="name-asc">A-Z</button>
+                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="middlewares" data-sort="name-desc">Z-A</button>
+                            </div>
+                            <div class="search-box view-search">
+                                <span class="search-icon">⌕</span>
+                                <input type="text" class="search-input section-search" data-protocol="tcp" data-type="middlewares" placeholder="Search middlewares..." maxlength="50" autocomplete="off">
+                                <button class="search-clear" type="button" title="Clear search">×</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="view-desc">Transform TCP connections before they reach services</p>
+                    <div class="search-info" id="tcp-middlewares-search-info"></div>
+                </header>
+                <div class="items-grid" id="tcp-middlewares-grid"></div>
+            </section>
+
+            <!-- TCP Services View -->
+            <section id="view-tcp-services" class="view">
+                <header class="view-header">
+                    <div class="view-header-row">
+                        <h1><span class="protocol-badge tcp">TCP</span> Services</h1>
+                        <div class="view-controls">
+                            <div class="filter-group">
+                                <span class="filter-label">Sort:</span>
+                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="services" data-sort="name-asc">A-Z</button>
+                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="services" data-sort="name-desc">Z-A</button>
+                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="services" data-sort="ip-asc">IP ↑</button>
+                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="services" data-sort="ip-desc">IP ↓</button>
+                            </div>
+                            <div class="search-box view-search">
+                                <span class="search-icon">⌕</span>
+                                <input type="text" class="search-input section-search" data-protocol="tcp" data-type="services" placeholder="Search services..." maxlength="50" autocomplete="off">
+                                <button class="search-clear" type="button" title="Clear search">×</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="view-desc">Backend servers that handle TCP connections</p>
+                    <div class="search-info" id="tcp-services-search-info"></div>
+                </header>
+                <div class="items-grid" id="tcp-services-grid"></div>
+            </section>
+
+            <!-- UDP Routers View -->
+            <section id="view-udp-routers" class="view">
+                <header class="view-header">
+                    <div class="view-header-row">
+                        <h1><span class="protocol-badge udp">UDP</span> Routers</h1>
+                        <div class="view-controls">
+                            <div class="filter-group">
+                                <span class="filter-label">Sort:</span>
+                                <button class="filter-btn section-filter" data-protocol="udp" data-type="routers" data-sort="name-asc">A-Z</button>
+                                <button class="filter-btn section-filter" data-protocol="udp" data-type="routers" data-sort="name-desc">Z-A</button>
+                            </div>
+                            <div class="search-box view-search">
+                                <span class="search-icon">⌕</span>
+                                <input type="text" class="search-input section-search" data-protocol="udp" data-type="routers" placeholder="Search routers..." maxlength="50" autocomplete="off">
+                                <button class="search-clear" type="button" title="Clear search">×</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="view-desc">Route incoming UDP datagrams to services</p>
+                    <div class="search-info" id="udp-routers-search-info"></div>
+                </header>
+                <div class="items-grid" id="udp-routers-grid"></div>
+            </section>
+
+            <!-- UDP Services View -->
+            <section id="view-udp-services" class="view">
+                <header class="view-header">
+                    <div class="view-header-row">
+                        <h1><span class="protocol-badge udp">UDP</span> Services</h1>
+                        <div class="view-controls">
+                            <div class="filter-group">
+                                <span class="filter-label">Sort:</span>
+                                <button class="filter-btn section-filter" data-protocol="udp" data-type="services" data-sort="name-asc">A-Z</button>
+                                <button class="filter-btn section-filter" data-protocol="udp" data-type="services" data-sort="name-desc">Z-A</button>
+                                <button class="filter-btn section-filter" data-protocol="udp" data-type="services" data-sort="ip-asc">IP ↑</button>
+                                <button class="filter-btn section-filter" data-protocol="udp" data-type="services" data-sort="ip-desc">IP ↓</button>
+                            </div>
+                            <div class="search-box view-search">
+                                <span class="search-icon">⌕</span>
+                                <input type="text" class="search-input section-search" data-protocol="udp" data-type="services" placeholder="Search services..." maxlength="50" autocomplete="off">
+                                <button class="search-clear" type="button" title="Clear search">×</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="view-desc">Backend servers that handle UDP datagrams</p>
+                    <div class="search-info" id="udp-services-search-info"></div>
+                </header>
+                <div class="items-grid" id="udp-services-grid"></div>
+            </section>
+
+            <!-- YAML View -->
+            <section id="view-yaml" class="view">
+                <header class="view-header">
+                    <h1>Raw YAML</h1>
+                    <p class="view-desc">Complete configuration file</p>
+                </header>
+                <div class="yaml-box">
+                    <div class="yaml-editor-container">
+                        <textarea id="yaml-editor" spellcheck="false"></textarea>
+                    </div>
+                    <div class="yaml-actions">
+                        <button type="button" id="yaml-save-btn" disabled>Save YAML</button>
+                        <button type="button" id="yaml-reset-btn">Reset</button>
+                        <span id="yaml-status" data-variant="muted"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-entry-points" class="view">
+                <header class="view-header">
+                    <h1>Entry Points</h1>
+                    <p class="view-desc">Entry points discovered in traefik.yml</p>
+                </header>
+                <div class="items-grid" id="entry-points-view-list"></div>
+            </section>
+
+            <section id="view-cert-resolvers" class="view">
+                <header class="view-header">
+                    <h1>Certificate Resolvers</h1>
+                    <p class="view-desc">Certificate resolvers configured in traefik.yml</p>
+                </header>
+                <div class="items-grid" id="cert-resolvers-view-list"></div>
+            </section>
+
+            <!-- Settings View -->
+            <section id="view-settings" class="view">
+                <header class="view-header">
+                    <h1>⚙ Settings</h1>
+                    <p class="view-desc">Configure application settings</p>
+                </header>
+
+                <div class="settings-container">
+                    <!-- Paths Section -->
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">Configuration Paths</h3>
+                        <p class="settings-section-desc">Configure the paths to your Traefik configuration files</p>
+                        
+                        <div class="settings-form">
+                            <div class="settings-field">
+                                <label for="settings-config-path">Dynamic Config Path</label>
+                                <div class="settings-input-group">
+                                    <input type="text" id="settings-config-path" class="settings-input" 
+                                           placeholder="/etc/traefik/config.yml">
+                                    <button type="button" class="settings-validate-btn" data-target="settings-config-path">
+                                        Validate
+                                    </button>
+                                </div>
+                                <span class="settings-hint">Path to your Traefik file provider config (config.yml)</span>
+                                <span class="settings-status" id="settings-config-path-status"></span>
+                            </div>
+                            
+                            <div class="settings-field">
+                                <label for="settings-traefik-path">Traefik Main Config Path</label>
+                                <div class="settings-input-group">
+                                    <input type="text" id="settings-traefik-path" class="settings-input" 
+                                           placeholder="/etc/traefik/traefik.yml">
+                                    <button type="button" class="settings-validate-btn" data-target="settings-traefik-path">
+                                        Validate
+                                    </button>
+                                </div>
+                                <span class="settings-hint">Path to your main Traefik configuration file (traefik.yml)</span>
+                                <span class="settings-status" id="settings-traefik-path-status"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Certificate Resolvers Section -->
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">Certificate Resolvers</h3>
+                        <p class="settings-section-desc">Resolvers detected from traefik.yml (read-only)</p>
+                        <div class="settings-list" id="cert-resolvers-list"></div>
+                    </div>
+
+                    <!-- Entry Points Section -->
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">Entry Points</h3>
+                        <p class="settings-section-desc">Entry points detected from traefik.yml (read-only)</p>
+                        <div class="settings-list" id="entry-points-list"></div>
+                    </div>
+
+                    <!-- Save Button -->
+                    <div class="settings-actions">
+                        <button type="button" class="settings-save-btn" id="save-settings-btn">
+                            Save Settings
+                        </button>
+                        <span class="settings-save-status" id="settings-save-status"></span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Right Detail Drawer -->
+        <aside id="drawer" class="drawer">
+            <header class="drawer-header">
+                <div>
+                    <div class="drawer-badges">
+                        <span class="drawer-protocol" id="drawer-protocol">http</span>
+                        <span class="drawer-type" id="drawer-type">router</span>
+                    </div>
+                    <h2 id="drawer-name">Item Name</h2>
+                </div>
+                <div class="drawer-actions">
+                    <button class="drawer-edit" id="drawer-edit" type="button">Edit</button>
+                    <button class="drawer-delete" id="drawer-delete" type="button" hidden>Delete</button>
+                    <button class="drawer-close" id="drawer-close">✕</button>
+                </div>
+            </header>
+
+            <div class="drawer-content">
+                <section class="drawer-section">
+                    <h3>Properties</h3>
+                    <div class="props-table" id="drawer-props"></div>
+                </section>
+
+                <section class="drawer-section">
+                    <h3>Connections</h3>
+                    <div class="connections" id="drawer-connections"></div>
+                </section>
+
+                <section class="drawer-section">
+                    <h3>YAML</h3>
+                    <pre class="drawer-yaml" id="drawer-yaml"></pre>
+                </section>
+            </div>
+        </aside>
+    </div>
+
+    <div id="overlay" class="overlay"></div>
+
+    <div id="delete-modal" class="delete-modal hidden">
+        <div class="delete-backdrop"></div>
+        <div class="delete-dialog" role="dialog" aria-modal="true">
+            <div class="delete-dialog-header">
+                <h3 class="delete-modal-title">Delete</h3>
+                <button type="button" id="delete-close" class="delete-close-btn" aria-label="Close">✕</button>
+            </div>
+            <div class="delete-modal-body"></div>
+            <div class="delete-modal-status" data-variant="info"></div>
+            <div class="delete-modal-actions">
+                <button type="button" id="delete-cancel" class="delete-btn secondary">Cancel</button>
+                <button type="button" id="delete-confirm" class="delete-btn danger">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load scripts in correct order -->
+    <script src="/js/settings.js"></script>
+    <script src="/js/delete.js"></script>
+    <script src="/js/app.js"></script>
+    <script src="/js/middleware.js"></script>
+    <script src="/js/routers.js"></script>
+    <script src="/js/modal.js"></script>
+    <script src="/js/editor.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (window.traefik) {
+                    window.configModal = new ConfigModal(window.traefik);
+                    window.editorModal = new EditorModal(window.traefik);
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>

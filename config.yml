@@ -1,0 +1,204 @@
+http:
+  routers:
+    notes-secure:
+      rule: "Host(`notes.mydomain.com`)"
+      service: notes-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.mydomain.com"
+            sans:
+              - mydomain.com
+      middlewares:
+        - redirect-to-https
+    room-secure:
+      rule: "Host(`room.mydomain.com`)"
+      service: room-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.mydomain.com"
+            sans:
+              - mydomain.com
+    geo-secure:
+      rule: "Host(`geo.mydomain.com`)"
+      service: geo-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.mydomain.com"
+            sans:
+              - mydomain.com
+    excal-secure:
+      rule: "Host(`excal.mydomain.com`)"
+      service: excal-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.mydomain.com"
+            sans:
+              - mydomain.com
+    reg-secure:
+      rule: "Host(`reg.mydomain.com`)"
+      service: reg-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.mydomain.com"
+            sans:
+              - mydomain.com
+    immich-secure:
+      rule: "Host(`immich.mydomain.com`)"
+      service: immich-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.mydomain.com"
+            sans:
+              - mydomain.com
+    search-secure:
+      rule: "Host(`search.mydomain.com`)"
+      service: search-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.mydomain.com"
+            sans:
+              - mydomain.com
+    mm-secure:
+      rule: "Host(`mm.mydomain.com`)"
+      service: mm-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.mydomain.com"
+            sans:
+              - mydomain.com
+    affine-secure:
+      rule: "Host(`affine.mydomain.com`)"
+      service: affine-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.mydomain.com"
+            sans:
+              - mydomain.com
+    n8n-secure:
+      rule: "Host(`n8n.mydomain.com`)"
+      service: n8n-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.mydomain.com"
+            sans:
+              - mydomain.com
+    vw-secure:
+      rule: "Host(`vw.mydomain.com`)"
+      service: vw-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.mydomain.com"
+            sans:
+              - mydomain.com
+    matrix-secure:
+      rule: "Host(`matrix.mydomain.com`)"
+      service: matrix-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.mydomain.com"
+            sans:
+              - mydomain.com
+    safd:
+      rule: "Host(`asdfasdf`)"
+      service: dsaf
+      entryPoints:
+        - https
+      tls:
+        certResolver: cloudflare
+        domains:
+          - main: "*.mydomain.net"
+            sans:
+              - mydomain.net
+  services:
+    search-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.2.32:8888"
+    matrix-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.0.2.32:8008"
+    immich-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.100.100.9:2283"
+    reg-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.100.100.9:5000"
+    geo-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.100.100.12:8080"
+    notes-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.100.100.8:2022"
+    mm-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.100.100.9:8065"
+    affine-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.100.100.9:3010"
+    n8n-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.100.100.9:5678"
+    vw-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.100.100.8:3001"
+    excal-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.100.100.8:8123"
+    room-service:
+      loadBalancer:
+        servers:
+          - url: "http://10.100.100.8:8124"
+    hello:
+      loadBalancer:
+        servers:
+          - url: "http://129.0.2.39"
+    dsaf:
+      loadBalancer:
+        servers:
+          - url: "http://119.92.29.92"

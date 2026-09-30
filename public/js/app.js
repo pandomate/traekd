@@ -12,6 +12,7 @@ class TraefikViewer {
         this.rawYaml = '';
         this.rawYamlLoaded = false;
         this.yamlDirty = false;
+        this.entryPointEditingName = null;
         this.deleteManager = window.DeleteManager ? new window.DeleteManager(this) : null;
         this.handleDocumentClick = this.handleDocumentClick.bind(this);
         this.init();
@@ -80,6 +81,7 @@ class TraefikViewer {
     }
 
     async init() {
+        if (window.traekdAuthReady) await window.traekdAuthReady;
         await this.loadConfig();
         await this.prefetchRawYaml();
         this.bindEvents();
@@ -155,16 +157,26 @@ class TraefikViewer {
     async loadConfig() {
         try {
             const [configRes, siteRes, settingsRes] = await Promise.all([
-                fetch('/api/config'),
-                fetch('/api/site-config'),
-                fetch('/api/settings')
+                fetch('/api/v1/config', { cache: 'no-store' }),
+                fetch('/api/site-config', { cache: 'no-store' }),
+                fetch('/api/settings', { cache: 'no-store' })
             ]);
             
             if (!configRes.ok || !siteRes.ok) {
                 throw new Error('Failed to fetch config');
             }
             
-            this.config = await configRes.json();
+            const active = await configRes.json();
+            this.config = active.config || {};
+            this.revision = active.revision || configRes.headers.get('ETag') || null;
+            this.activeConfigSource = {
+                storageMode: active.storageMode,
+                configuredPath: active.configuredPath,
+                path: active.path
+            };
+            this.rawYaml = '';
+            this.rawYamlLoaded = false;
+            this.yamlDirty = false;
             // Store original order
             this.storeOriginalOrder();
             
@@ -174,15 +186,31 @@ class TraefikViewer {
             const pathEl = document.getElementById('config-path');
             
             if (titleEl) titleEl.textContent = this.sanitizeInput(site.title?.split(' ')[0] || 'Traefik');
-            if (pathEl) pathEl.textContent = this.sanitizeInput(site.configPath || '');
+            if (pathEl) {
+                const label = active.storageMode === 'directory' ? 'Managed' : 'Single file';
+                pathEl.textContent = `${label}: ${active.path || site.configPath || ''}`;
+                pathEl.title = active.path || site.configPath || '';
+            }
             document.title = this.sanitizeInput(site.title || 'Traefik Config Manager');
 
             // Load settings if available
             if (settingsRes.ok) {
                 this.updateSettingsCache(await settingsRes.json());
             }
-        } catch (e) { 
-            console.error('Load failed:', e); 
+            return true;
+        } catch (e) {
+            // Never retain resources from the previously selected source.
+            this.config = {};
+            this.revision = null;
+            this.activeConfigSource = null;
+            this.rawYaml = '';
+            this.rawYamlLoaded = false;
+            this.yamlDirty = false;
+            this.storeOriginalOrder();
+            const pathEl = document.getElementById('config-path');
+            if (pathEl) { pathEl.textContent = 'Configuration unavailable'; pathEl.title = e.message; }
+            console.error('Load failed:', e);
+            return false;
         }
     }
 
@@ -438,6 +466,26 @@ class TraefikViewer {
         }
 
         this.bindYamlEditorEvents();
+        this.bindEntryPointEvents();
+    }
+
+    bindEntryPointEvents() {
+        const addButton = document.getElementById('entry-point-add');
+        if (addButton && !addButton.dataset.bound) {
+            addButton.dataset.bound = 'true';
+            addButton.addEventListener('click', () => this.openEntryPointModal());
+        }
+        const form = document.getElementById('entry-point-form');
+        if (form && !form.dataset.bound) {
+            form.dataset.bound = 'true';
+            form.addEventListener('submit', event => { event.preventDefault(); this.saveEntryPoint(); });
+        }
+        const modal = document.getElementById('entry-point-modal');
+        modal?.querySelectorAll('[data-entry-point-cancel]').forEach(button => {
+            if (button.dataset.bound) return;
+            button.dataset.bound = 'true';
+            button.addEventListener('click', () => this.closeEntryPointModal());
+        });
     }
 
     bindYamlEditorEvents() {
@@ -446,13 +494,11 @@ class TraefikViewer {
             editor.dataset.bound = 'true';
             editor.addEventListener('input', () => this.setYamlDirty(true));
         }
-
         const saveBtn = document.getElementById('yaml-save-btn');
         if (saveBtn && !saveBtn.dataset.bound) {
             saveBtn.dataset.bound = 'true';
-            saveBtn.addEventListener('click', () => this.saveRawYaml());
+            saveBtn.addEventListener('click', () => this.saveYamlProposal());
         }
-
         const resetBtn = document.getElementById('yaml-reset-btn');
         if (resetBtn && !resetBtn.dataset.bound) {
             resetBtn.dataset.bound = 'true';
@@ -466,8 +512,9 @@ class TraefikViewer {
             const err = await res.json().catch(() => ({}));
             throw new Error(err.error || 'Failed to load YAML');
         }
-        const { yaml } = await res.json();
+        const { yaml, revision } = await res.json();
         this.rawYaml = typeof yaml === 'string' ? yaml : '';
+        this.revision = revision || res.headers.get('ETag') || this.revision;
         this.rawYamlLoaded = true;
     }
 
@@ -511,44 +558,104 @@ class TraefikViewer {
         }
     }
 
-    async saveRawYaml() {
-        const editor = document.getElementById('yaml-editor');
-        if (!editor) return;
-        const payload = editor.value ?? '';
-        this.setYamlStatus('Saving…', 'muted');
-        const saveBtn = document.getElementById('yaml-save-btn');
-        saveBtn && (saveBtn.disabled = true);
-
-        try {
-            const res = await fetch('/api/config/raw', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ yaml: payload })
-            });
-            const result = await res.json();
-            if (!res.ok || !result.success) {
-                throw new Error(result.error || 'Save failed');
-            }
-
-            this.rawYaml = payload;
-            this.setYamlDirty(false);
-            await this.loadConfig();
-            this.render();
-            this.setYamlStatus('Config saved successfully', 'success');
-        } catch (error) {
-            this.setYamlStatus(error.message, 'error');
-            this.setYamlDirty(true);
-        }
-    }
-
     async resetYamlEditor() {
         this.setYamlStatus('Reloading…', 'muted');
         try {
             await this.renderYaml();
-            this.setYamlStatus('Reloaded from disk', 'success');
+            this.setYamlStatus('Rendered from database', 'success');
         } catch (error) {
             this.setYamlStatus(error.message, 'error');
         }
+    }
+
+    async saveYamlProposal() {
+        const editor = document.getElementById('yaml-editor');
+        const saveBtn = document.getElementById('yaml-save-btn');
+        if (!editor || !this.yamlDirty) return;
+        saveBtn.disabled = true;
+        this.setYamlStatus('Validating proposal…', 'muted');
+        try {
+            const planResponse = await fetch('/api/v1/config/yaml/plan', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ yaml: editor.value })
+            });
+            const plan = await planResponse.json();
+            if (!planResponse.ok || !plan.success) {
+                const detail = plan.path?.[0]?.message || plan.errors?.[0]?.message;
+                throw new Error(detail || plan.error || 'YAML validation failed');
+            }
+            if (!plan.changes.length) {
+                editor.value = plan.normalizedYaml;
+                this.setYamlDirty(false);
+                this.setYamlStatus('No configuration changes detected', 'success');
+                return;
+            }
+            if (!await this.showConfirmDialog('Apply YAML changes?', plan.changes)) {
+                this.setYamlStatus('Change cancelled', 'muted');
+                return;
+            }
+            const applyResponse = await fetch('/api/v1/config/yaml', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'If-Match': plan.revision || this.revision || '' },
+                body: JSON.stringify({ yaml: editor.value, revision: plan.revision })
+            });
+            const result = await applyResponse.json();
+            if (!applyResponse.ok || !result.success) throw new Error(result.error || 'Could not apply YAML proposal');
+            await this.loadConfig();
+            await this.fetchRawYaml();
+            editor.value = this.rawYaml;
+            this.setYamlDirty(false);
+            this.render();
+            this.setYamlStatus('Validated and applied through SQLite', 'success');
+        } catch (error) {
+            this.setYamlStatus(error.message, 'error');
+            this.setYamlDirty(true);
+        } finally {
+            if (saveBtn && !this.yamlDirty) saveBtn.disabled = true;
+            else if (saveBtn) saveBtn.disabled = false;
+        }
+    }
+
+    showConfirmDialog(title, changes = []) {
+        const modal = document.getElementById('confirm-modal');
+        const titleElement = document.getElementById('confirm-modal-title');
+        const body = document.getElementById('confirm-modal-body');
+        const accept = document.getElementById('confirm-modal-accept');
+        if (!modal || !titleElement || !body || !accept) return Promise.resolve(false);
+        titleElement.textContent = title;
+        body.replaceChildren();
+        const summary = document.createElement('p');
+        summary.textContent = `${changes.length} configuration path${changes.length === 1 ? '' : 's'} will change:`;
+        body.appendChild(summary);
+        const list = document.createElement('ul');
+        list.className = 'confirm-change-list';
+        changes.forEach(change => {
+            const item = document.createElement('li');
+            item.textContent = change;
+            list.appendChild(item);
+        });
+        body.appendChild(list);
+        modal.classList.remove('hidden');
+        modal.classList.add('open');
+        document.body.classList.add('delete-modal-open');
+
+        return new Promise(resolve => {
+            const finish = accepted => {
+                modal.classList.remove('open');
+                modal.classList.add('hidden');
+                document.body.classList.remove('delete-modal-open');
+                accept.onclick = null;
+                modal.querySelectorAll('[data-confirm-cancel]').forEach(button => { button.onclick = null; });
+                document.removeEventListener('keydown', onKeydown);
+                resolve(accepted);
+            };
+            const onKeydown = event => { if (event.key === 'Escape') finish(false); };
+            accept.onclick = () => finish(true);
+            modal.querySelectorAll('[data-confirm-cancel]').forEach(button => { button.onclick = () => finish(false); });
+            document.addEventListener('keydown', onKeydown);
+            accept.focus();
+        });
     }
 
     handleDocumentClick(e) {
@@ -568,7 +675,7 @@ class TraefikViewer {
     }
 
     switchView(view, save = true) {
-        const validViews = ['overview', 'yaml', 'settings', 'http-routers', 'http-middlewares', 'http-services', 
+        const validViews = ['overview', 'yaml', 'settings', 'account', 'http-routers', 'http-middlewares', 'http-services',
                            'tcp-routers', 'tcp-middlewares', 'tcp-services', 'udp-routers', 'udp-services',
                            'entry-points', 'cert-resolvers'];
         if (!validViews.includes(view)) return;
@@ -585,7 +692,7 @@ class TraefikViewer {
             v.classList.toggle('active', v.id === `view-${view}`);
         });
         if (view === 'yaml') this.renderYaml();
-        if (view === 'settings') {
+        if (view === 'settings' || view === 'account') {
             if (!this.settingsManager && window.SettingsManager) {
                 this.settingsManager = new window.SettingsManager(this);
             }
@@ -645,7 +752,7 @@ class TraefikViewer {
 
         const setDisplay = (id, show) => {
             const el = document.getElementById(id);
-            if (el) el.style.display = show ? 'block' : 'none';
+            if (el) el.hidden = !show;
         };
 
         setDisplay('http-flow-section', this.countItems('http') > 0);
@@ -890,6 +997,12 @@ class TraefikViewer {
         if (!container) return;
 
         let items = Object.entries(this.getSection(p, t));
+        if (t === 'middlewares') {
+            const configured = new Set(items.map(([name]) => name));
+            this.getMissingMiddlewareReferences(p).forEach(name => {
+                if (!configured.has(name)) items.push([name, { __missingDefinition: true }]);
+            });
+        }
         const totalCount = items.length;
         const searchKey = `${p}-${t}`;
         const search = this.sectionSearches[searchKey] || '';
@@ -961,6 +1074,17 @@ class TraefikViewer {
 
     renderMiddlewaresGrid(container, middlewares, protocol) {
         container.innerHTML = middlewares.map(([name, data]) => {
+            if (data.__missingDefinition) {
+                const usedBy = this.getRoutersUsing(protocol, 'middlewares', name);
+                return `<div class="item-card middleware missing-definition" data-protocol="${protocol}" data-section="middlewares" data-name="${this.escapeHtml(name)}" data-missing-definition="true">
+                    <div class="item-card-header">
+                        <div class="item-card-heading"><span class="item-dot"></span><span class="item-name">${this.escapeHtml(name)}</span></div>
+                        <div class="item-card-actions"><button type="button" class="item-card-define">Define</button></div>
+                    </div>
+                    <div class="middleware-detail"><div class="middleware-config-preview"><div class="middleware-config-row"><span class="middleware-config-key">Status</span><span class="middleware-config-value">Missing definition</span></div></div></div>
+                    <div class="item-used-by"><span class="used-by-label">Referenced by:</span> ${usedBy.map(router => `<span class="conn-chip router">${this.escapeHtml(router)}</span>`).join('')}</div>
+                </div>`;
+            }
             const type = Object.keys(data)[0] || 'unknown';
             const typeConfig = data[type] || {};
             const usedBy = this.getRoutersUsing(protocol, 'middlewares', name);
@@ -1023,7 +1147,20 @@ class TraefikViewer {
 
     bindCardEvents(container) {
         container.querySelectorAll('.item-card').forEach(card => {
+            card.querySelector('.item-card-define')?.addEventListener('click', async event => {
+                event.stopPropagation();
+                const protocol = this.validateProtocol(card.dataset.protocol);
+                const name = this.validateName(card.dataset.name);
+                if (!protocol || !name || !window.configModal) return;
+                await window.configModal.open(protocol);
+                window.configModal.configType = 'middleware';
+                window.configModal.currentStep = 1;
+                window.configModal.formData = { protocol, configType: 'middleware', name };
+                window.configModal.renderStep();
+                window.configModal.saveState();
+            });
             card.addEventListener('click', () => {
+                if (card.dataset.missingDefinition === 'true') return;
                 const protocol = this.validateProtocol(card.dataset.protocol);
                 const section = this.validateSection(card.dataset.section);
                 const name = this.validateName(card.dataset.name);
@@ -1336,12 +1473,110 @@ class TraefikViewer {
                     <div class="item-card-header">
                         <span class="item-dot"></span>
                         <span class="item-name">${this.escapeHtml(name)}</span>
+                        <button type="button" class="drawer-edit entry-point-edit" data-entry-point-name="${this.escapeHtml(name)}">Edit</button>
                     </div>
                     <div class="item-summary">Defined in traefik.yml</div>
                     <pre class="infra-yaml">${this.escapeHtml(yaml || '(empty)')}</pre>
                 </div>
             `;
         }).join('');
+        container.querySelectorAll('.entry-point-edit').forEach(button => {
+            button.addEventListener('click', () => this.openEntryPointModal(button.dataset.entryPointName));
+        });
+    }
+
+    openEntryPointModal(name = null) {
+        const modal = document.getElementById('entry-point-modal');
+        const form = document.getElementById('entry-point-form');
+        if (!modal || !form) return;
+        this.entryPointEditingName = name;
+        const config = name ? this.cloneData(this.getEntryPointConfigs()[name] || {}) : {};
+        const redirect = config.http?.redirections?.entryPoint || {};
+        document.getElementById('entry-point-modal-title').textContent = name ? `Edit Entry Point “${name}”` : 'Add Entry Point';
+        const nameInput = document.getElementById('entry-point-name');
+        nameInput.value = name || '';
+        nameInput.disabled = Boolean(name);
+        document.getElementById('entry-point-address').value = config.address || '';
+        document.getElementById('entry-point-default').checked = config.asDefault === true;
+        document.getElementById('entry-point-reuse-port').checked = config.reusePort === true;
+        document.getElementById('entry-point-redirect-target').value = redirect.to || '';
+        document.getElementById('entry-point-redirect-scheme').value = redirect.scheme === 'http' ? 'http' : 'https';
+        document.getElementById('entry-point-redirect-permanent').checked = redirect.permanent !== false;
+        document.getElementById('entry-point-status').textContent = '';
+        modal.classList.remove('hidden');
+        modal.classList.add('open');
+        document.body.classList.add('delete-modal-open');
+        (name ? document.getElementById('entry-point-address') : nameInput).focus();
+    }
+
+    closeEntryPointModal() {
+        const modal = document.getElementById('entry-point-modal');
+        modal?.classList.remove('open');
+        modal?.classList.add('hidden');
+        document.body.classList.remove('delete-modal-open');
+        this.entryPointEditingName = null;
+    }
+
+    buildEntryPointConfig() {
+        const config = this.entryPointEditingName
+            ? this.cloneData(this.getEntryPointConfigs()[this.entryPointEditingName] || {})
+            : {};
+        config.address = document.getElementById('entry-point-address').value.trim();
+        if (document.getElementById('entry-point-default').checked) config.asDefault = true;
+        else delete config.asDefault;
+        if (document.getElementById('entry-point-reuse-port').checked) config.reusePort = true;
+        else delete config.reusePort;
+        const redirectTarget = document.getElementById('entry-point-redirect-target').value.trim();
+        if (redirectTarget) {
+            config.http ||= {};
+            config.http.redirections ||= {};
+            config.http.redirections.entryPoint = {
+                to: redirectTarget,
+                scheme: document.getElementById('entry-point-redirect-scheme').value,
+                permanent: document.getElementById('entry-point-redirect-permanent').checked
+            };
+        } else if (config.http?.redirections?.entryPoint) {
+            delete config.http.redirections.entryPoint;
+            if (!Object.keys(config.http.redirections).length) delete config.http.redirections;
+            if (!Object.keys(config.http).length) delete config.http;
+        }
+        return config;
+    }
+
+    async saveEntryPoint() {
+        const nameInput = document.getElementById('entry-point-name');
+        const name = this.entryPointEditingName || nameInput.value.trim();
+        const status = document.getElementById('entry-point-status');
+        const saveButton = document.getElementById('entry-point-save');
+        if (!/^[A-Za-z0-9_-]{1,64}$/.test(name)) {
+            status.textContent = 'Name may contain letters, numbers, dashes, and underscores only.';
+            status.dataset.variant = 'error';
+            return;
+        }
+        if (!document.getElementById('entry-point-form').reportValidity()) return;
+        saveButton.disabled = true;
+        status.textContent = 'Saving static configuration…';
+        status.dataset.variant = 'info';
+        try {
+            const editing = Boolean(this.entryPointEditingName);
+            const response = await fetch(`/api/v1/entry-points/${encodeURIComponent(name)}`, {
+                method: editing ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json', 'If-Match': this.settings?.staticRevision || '' },
+                body: JSON.stringify({ config: this.buildEntryPointConfig(), revision: this.settings?.staticRevision })
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || 'Could not save entry point');
+            const settingsResponse = await fetch('/api/settings', { cache: 'no-store' });
+            if (!settingsResponse.ok) throw new Error('Entry point saved, but settings could not be refreshed');
+            this.updateSettingsCache(await settingsResponse.json());
+            this.render();
+            status.textContent = 'Saved. Restart Traefik to apply static configuration changes.';
+            status.dataset.variant = 'success';
+            setTimeout(() => this.closeEntryPointModal(), 1100);
+        } catch (error) {
+            status.textContent = error.message;
+            status.dataset.variant = 'error';
+        } finally { saveButton.disabled = false; }
     }
 
     renderCertResolversView() {
@@ -1390,6 +1625,18 @@ class TraefikViewer {
             if (this.middlewarePayloadContains(payload, name)) acc.push(mwName);
             return acc;
         }, []);
+    }
+
+    getMissingMiddlewareReferences(protocol) {
+        const configured = this.getSection(protocol, 'middlewares');
+        const missing = new Set();
+        Object.values(this.getSection(protocol, 'routers')).forEach(router => {
+            (router.middlewares || []).forEach(reference => {
+                const localName = typeof reference === 'string' ? reference.split('@')[0] : '';
+                if (localName && !reference.includes('@') && !configured[localName]) missing.add(localName);
+            });
+        });
+        return [...missing];
     }
 
     middlewarePayloadContains(payload, target) {

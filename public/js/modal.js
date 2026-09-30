@@ -70,7 +70,7 @@ class ConfigModal {
                 }
                 
                 document.getElementById('config-modal')?.classList.add('open');
-                document.body.style.overflow = 'hidden';
+                document.body.classList.add('config-modal-open');
                 this.renderStep();
             } catch {
                 sessionStorage.removeItem('modalState');
@@ -208,14 +208,14 @@ class ConfigModal {
                             <div class="modal-step-indicator" id="modal-step-indicator"></div>
                             <h2 id="modal-title">Add New Configuration</h2>
                         </div>
-                        <button class="modal-close-btn" id="modal-close-btn" aria-label="Close">×</button>
+                        <button type="button" class="modal-close-btn" id="modal-close-btn" aria-label="Close">×</button>
                     </div>
                     <div class="config-modal-body" id="modal-body">
                         <!-- Dynamic content -->
                     </div>
                     <div class="config-modal-footer" id="modal-footer">
-                        <button class="modal-btn modal-btn-secondary" id="modal-back-btn">Back</button>
-                        <button class="modal-btn modal-btn-primary" id="modal-next-btn">Next</button>
+                        <button type="button" class="modal-btn modal-btn-secondary" id="modal-back-btn">Back</button>
+                        <button type="button" class="modal-btn modal-btn-primary" id="modal-next-btn">Next</button>
                     </div>
                 </div>
             </div>
@@ -247,7 +247,7 @@ class ConfigModal {
         this.configType = null;
         this.formData = { protocol };
         document.getElementById('config-modal')?.classList.add('open');
-        document.body.style.overflow = 'hidden';
+        document.body.classList.add('config-modal-open');
         this.renderStep();
         this.saveState();
     }
@@ -255,7 +255,7 @@ class ConfigModal {
     close() {
         document.getElementById('config-modal')?.classList.remove('open');
         document.querySelector('.config-modal-container')?.classList.remove('modal-wide');
-        document.body.style.overflow = '';
+        document.body.classList.remove('config-modal-open');
         this.reset();
         sessionStorage.removeItem('modalState');
     }
@@ -269,7 +269,7 @@ class ConfigModal {
     resetToInitialStep() {
         const footer = document.getElementById('modal-footer');
         const protocol = this.protocol;
-        if (footer) footer.style.display = 'flex';
+        if (footer) footer.hidden = false;
         this.currentStep = 0;
         this.configType = null;
         this.formData = protocol ? { protocol } : {};
@@ -287,13 +287,15 @@ class ConfigModal {
 
     goBack() {
         if (this.currentStep > 0) {
+            this.saveCurrentStepData();
             // Check if we came from router to create middleware
             if (this.configType === 'middleware' && this.formData.returnFromMiddleware) {
                 // Go back to router middlewares step
+                const savedStep = this.formData.savedRouterStep || 2;
+                const routerDraft = this.formData.routerDraft || { protocol: this.protocol };
                 this.configType = 'router';
-                this.currentStep = this.formData.savedRouterStep || 2;
-                delete this.formData.returnFromMiddleware;
-                delete this.formData.savedRouterStep;
+                this.currentStep = savedStep;
+                this.formData = routerDraft;
                 this.renderStep();
                 this.saveState();
                 return;
@@ -387,7 +389,9 @@ class ConfigModal {
                         this.formData[field.name] = field.value;
                     }
                 } else {
-                    if (field.tagName === 'SELECT') {
+                    if (field.tagName === 'SELECT' && field.multiple) {
+                        this.formData[field.name] = Array.from(field.selectedOptions).map(option => option.value).filter(Boolean);
+                    } else if (field.tagName === 'SELECT') {
                         if (field.value && !field.selectedOptions[0]?.disabled) {
                             this.formData[field.name] = field.value;
                         }
@@ -418,8 +422,8 @@ class ConfigModal {
         body.querySelector('.error-message')?.remove();
 
         this.renderStepIndicator();
-        backBtn.style.display = this.currentStep === 0 ? 'none' : 'block';
-        footer.style.display = 'flex';
+        backBtn.hidden = this.currentStep === 0;
+        footer.hidden = false;
 
         if (this.currentStep === 0) {
             this.renderTypeSelection(title, body, nextBtn);
@@ -467,7 +471,7 @@ class ConfigModal {
             <div class="type-selection">
                 <p class="modal-description">What would you like to create?</p>
                 <div class="type-options">
-                    <button class="type-option" data-type="router">
+                    <button type="button" class="type-option" data-type="router">
                         <div class="type-icon"><span class="dot router"></span></div>
                         <div class="type-info">
                             <h3>Router</h3>
@@ -475,7 +479,7 @@ class ConfigModal {
                         </div>
                     </button>
                     ${hasMiddlewares ? `
-                    <button class="type-option" data-type="middleware">
+                    <button type="button" class="type-option" data-type="middleware">
                         <div class="type-icon"><span class="dot middleware"></span></div>
                         <div class="type-info">
                             <h3>Middleware</h3>
@@ -672,7 +676,7 @@ class ConfigModal {
                 `}
             </div>
         `;
-        footer.style.display = 'none';
+        footer.hidden = true;
     }
 
     showSuccess() {
@@ -683,10 +687,10 @@ class ConfigModal {
             <div class="success-message">
                 <div class="success-icon">✓</div>
                 <h3>Configuration Created!</h3>
-                <p>Your ${this.configType} "${this.formData.name}" has been added successfully.</p>
+                <p>Your ${this.viewer.escapeHtml(this.configType)} "${this.viewer.escapeHtml(this.formData.name || '')}" has been added successfully.</p>
             </div>
         `;
-        footer.style.display = 'none';
+        footer.hidden = true;
     }
 
     showError(message) {

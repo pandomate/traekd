@@ -38,7 +38,7 @@ class RouterHandler {
     resetRouterData() {
         const keysToRemove = [
             'name', 'rule', 'ruleType', 'ruleValue1', 'ruleValue2',
-            'entryPoint', 'priority', 'tlsMode', 
+            'entryPoint', 'entryPoints', 'priority', 'tlsMode', 'tls.options', 'tlsDomains',
             'tls.certResolver', 'tls.certResolverAdv', 
             'tls.mainPrefix', 'tls.mainDomain', 'tls.passthrough',
             'sans', 'middlewares', 'serviceType', 
@@ -65,34 +65,13 @@ class RouterHandler {
         if (!url) return false;
         
         if (protocol === 'http') {
-            // HTTP services: must be http(s)://ip-address or http(s)://ip-address:port
-            const httpPattern = /^https?:\/\/(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d{1,5})?$/;
-            if (!httpPattern.test(url)) return false;
-            
-            // Validate IP octets
-            const ipMatch = url.match(/(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/);
-            if (ipMatch) {
-                for (let i = 1; i <= 4; i++) {
-                    const octet = parseInt(ipMatch[i], 10);
-                    if (octet < 0 || octet > 255) return false;
-                }
-            }
-            return true;
-        } else {
-            // TCP/UDP services: ip-address:port
-            const tcpPattern = /^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d{1,5})?$/;
-            if (!tcpPattern.test(url)) return false;
-            
-            // Validate IP octets
-            const ipMatch = url.match(/(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/);
-            if (ipMatch) {
-                for (let i = 1; i <= 4; i++) {
-                    const octet = parseInt(ipMatch[i], 10);
-                    if (octet < 0 || octet > 255) return false;
-                }
-            }
-            return true;
+            try {
+                const parsed = new URL(url);
+                return ['http:', 'https:', 'h2c:'].includes(parsed.protocol) && !!parsed.hostname && (!parsed.port || (Number(parsed.port) >= 1 && Number(parsed.port) <= 65535));
+            } catch { return false; }
         }
+        const match = url.match(/^(?:[^:\s]+|\[[^\]]+\]):(\d+)$/);
+        return !!match && Number(match[1]) >= 1 && Number(match[1]) <= 65535;
     }
 
     validateStep(step, body) {
@@ -116,7 +95,7 @@ class RouterHandler {
             
             // Validate entry point selection
             const entryPointSelect = body.querySelector('#entry-point-select');
-            if (!entryPointSelect?.value || entryPointSelect.selectedOptions[0?.disabled]) {
+            if (!entryPointSelect?.selectedOptions?.length || entryPointSelect.selectedOptions[0]?.disabled) {
                 entryPointSelect?.classList.add('input-error');
                 valid = false;
             } else {
@@ -136,7 +115,7 @@ class RouterHandler {
 
             // Validate all required dropdowns dynamically
             body.querySelectorAll('select.required-field, select[required]').forEach(select => {
-                if (!select.value || select.selectedOptions[0?.disabled]) {
+                if (!select.value || select.selectedOptions[0]?.disabled) {
                     select.classList.add('input-error');
                     valid = false;
                 } else {
@@ -169,7 +148,7 @@ class RouterHandler {
             return valid;
         }
         
-        if (step === 3) {
+        if (step === (this.modal.protocol === 'udp' ? 2 : 3)) {
             let valid = true;
             const serviceType = this.modal.formData.serviceType || 'existing';
             
@@ -186,7 +165,8 @@ class RouterHandler {
                 const serviceNameInput = body.querySelector('#service-name');
                 const serviceNameValue = serviceNameInput?.value?.trim() || '';
                 
-                if (!serviceNameValue) {
+                const nameRegex = /^[a-zA-Z0-9_-]+$/;
+                if (!serviceNameValue || !nameRegex.test(serviceNameValue)) {
                     serviceNameInput?.classList.add('input-error');
                     valid = false;
                 } else if (this.isServiceNameDuplicate(serviceNameValue)) {
@@ -315,7 +295,7 @@ class RouterHandler {
                 <div class="form-group">
                     <label for="router-name">Router Name <span class="required">*</span></label>
                     <input type="text" id="router-name" name="name" class="form-input required-field" required 
-                           placeholder="my-router" value="${this.modal.formData.name || ''}">
+                           placeholder="my-router" value="${this.modal.viewer.escapeHtml(this.modal.formData.name || '')}">
                     <span class="form-hint" id="router-name-hint">Letters, numbers, dashes and underscores only</span>
                     <span class="form-error-hint hidden" id="router-name-error">Router name already exists</span>
                 </div>
@@ -336,28 +316,27 @@ class RouterHandler {
                             ${this.renderRuleInput()}
                         </div>
                         <div class="rule-preview-label">Generated Rule:</div>
-                        <div class="rule-preview" id="rule-preview">${this.modal.formData.rule || this.generateRulePreview()}</div>
+                        <div class="rule-preview" id="rule-preview">${this.modal.viewer.escapeHtml(this.modal.formData.rule || this.generateRulePreview() || '(enter a value to see the rule)')}</div>
                     </div>
-                    <input type="hidden" name="rule" id="rule-hidden" value="${this.modal.formData.rule || ''}">
+                    <input type="hidden" name="rule" id="rule-hidden" value="${this.modal.viewer.escapeHtml(this.modal.formData.rule || '')}">
                 </div>
                 ` : ''}
                 
                 <div class="form-group">
                     <label for="entry-point-select">Entry Point <span class="required">*</span></label>
-                    <select id="entry-point-select" name="entryPoint" class="form-select required-field" required>
-                        <option value="" disabled ${!this.modal.formData.entryPoint ? 'selected' : ''}>Select an option</option>
+            <select id="entry-point-select" name="entryPoints" class="form-select required-field" required multiple size="${Math.min(Math.max(this.entryPointOptions.length, 2), 5)}">
                         ${this.entryPointOptions.map(ep => `
-                            <option value="${ep}" ${this.modal.formData.entryPoint === ep ? 'selected' : ''}>${ep}</option>
+                            <option value="${this.modal.viewer.escapeHtml(ep)}" ${(this.modal.formData.entryPoints || (this.modal.formData.entryPoint ? [this.modal.formData.entryPoint] : [])).includes(ep) ? 'selected' : ''}>${this.modal.viewer.escapeHtml(ep)}</option>
                         `).join('')}
                     </select>
-                    <span class="form-hint">web = HTTP:80, websecure = HTTPS:443</span>
+                    <span class="form-hint">Select one or more entry points. Hold Ctrl/Cmd to select multiple.</span>
                 </div>
                 
                 ${this.modal.protocol !== 'udp' ? `
                 <div class="form-group">
                     <label for="router-priority">Priority</label>
                     <input type="number" id="router-priority" name="priority" class="form-input" 
-                           placeholder="Auto-calculated if empty" value="${this.modal.formData.priority || ''}">
+                           placeholder="Auto-calculated if empty" value="${this.modal.viewer.escapeHtml(this.modal.formData.priority || '')}">
                     <span class="form-hint">Higher values = higher priority</span>
                 </div>
                 
@@ -383,11 +362,11 @@ class RouterHandler {
                 
                 <div id="tls-simple-options" class="${currentTlsMode === 'simple' ? '' : 'hidden'}">
                     <div class="form-group">
-                        <label for="cert-resolver">Certificate Resolver <span class="required">*</span></label>
+                        <label for="cert-resolver">Certificate Resolver</label>
                         <select id="cert-resolver" name="tls.certResolver" class="form-select">
                             <option value="" disabled ${!this.modal.formData['tls.certResolver'] ? 'selected' : ''}>Select an option</option>
                             ${this.certResolvers.map(cr => `
-                                <option value="${cr}" ${this.modal.formData['tls.certResolver'] === cr ? 'selected' : ''}>${cr}</option>
+                                <option value="${this.modal.viewer.escapeHtml(cr)}" ${this.modal.formData['tls.certResolver'] === cr ? 'selected' : ''}>${this.modal.viewer.escapeHtml(cr)}</option>
                             `).join('')}
                         </select>
                     </div>
@@ -409,7 +388,7 @@ class RouterHandler {
                         <select id="cert-resolver-adv" name="tls.certResolverAdv" class="form-select">
                             <option value="">None</option>
                             ${this.certResolvers.map(cr => `
-                                <option value="${cr}" ${this.modal.formData['tls.certResolverAdv'] === cr ? 'selected' : ''}>${cr}</option>
+                                <option value="${this.modal.viewer.escapeHtml(cr)}" ${this.modal.formData['tls.certResolverAdv'] === cr ? 'selected' : ''}>${this.modal.viewer.escapeHtml(cr)}</option>
                             `).join('')}
                         </select>
                     </div>
@@ -419,7 +398,7 @@ class RouterHandler {
                         <select id="tls-options" name="tls.options" class="form-select">
                             <option value="">Default</option>
                             ${tlsOptions.map(opt => `
-                                <option value="${opt}" ${this.modal.formData['tls.options'] === opt ? 'selected' : ''}>${opt}</option>
+                                <option value="${this.modal.viewer.escapeHtml(opt)}" ${this.modal.formData['tls.options'] === opt ? 'selected' : ''}>${this.modal.viewer.escapeHtml(opt)}</option>
                             `).join('')}
                         </select>
                         <span class="form-hint">TLS options defined in your Traefik configuration</span>
@@ -509,7 +488,7 @@ class RouterHandler {
                     <div class="form-group">
                         <label>Main Domain</label>
                         <input type="text" class="form-input tls-domain-main" data-index="${index}" 
-                               placeholder="example.com or *.example.com" value="${main}">
+                               placeholder="example.com or *.example.com" value="${this.modal.viewer.escapeHtml(main)}">
                         <span class="form-hint">Use * for wildcard (e.g., *.example.com)</span>
                     </div>
                     <div class="form-group">
@@ -519,7 +498,7 @@ class RouterHandler {
                                 <div class="tls-san-item">
                                     <input type="text" class="form-input tls-san-input" 
                                            data-domain-index="${index}" data-san-index="${sanIndex}" 
-                                           value="${san}" placeholder="sub.example.com">
+                                           value="${this.modal.viewer.escapeHtml(san)}" placeholder="sub.example.com">
                                     <button type="button" class="tls-san-remove" 
                                             data-domain-index="${index}" data-san-index="${sanIndex}">×</button>
                                 </div>
@@ -664,9 +643,8 @@ class RouterHandler {
         }
         
         // Entry points
-        if (this.modal.formData.entryPoint) {
-            routerConfig.entryPoints = [this.modal.formData.entryPoint];
-        }
+        const entryPoints = this.modal.formData.entryPoints || (this.modal.formData.entryPoint ? [this.modal.formData.entryPoint] : []);
+        if (entryPoints.length) routerConfig.entryPoints = entryPoints;
         
         // Service - set BEFORE ordering
         let serviceConfig = null;
@@ -753,7 +731,8 @@ class RouterHandler {
             type: 'router',
             name: this.modal.formData.name,
             router: orderedRouterConfig,
-            service: serviceConfig
+            service: serviceConfig,
+            revision: this.modal.viewer.revision
         };
     }
 
@@ -764,9 +743,9 @@ class RouterHandler {
         }
 
         try {
-            const res = await fetch('/api/config/router', {
+            const res = await fetch('/api/v1/routes', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'If-Match': config.revision || '' },
                 body: JSON.stringify(config)
             });
 
@@ -815,7 +794,7 @@ class RouterHandler {
                 <span class="domain-separator">.</span>
                 <select class="form-select domain-select san-domain">
                     <option value="" disabled selected>Select an option</option>
-                    ${this.availableDomains.map(d => `<option value="${d}">${d}</option>`).join('')}
+                    ${this.availableDomains.map(d => `<option value="${this.modal.viewer.escapeHtml(d)}">${this.modal.viewer.escapeHtml(d)}</option>`).join('')}
                 </select>
             </div>
             <button type="button" class="remove-san-btn">×</button>
@@ -841,15 +820,15 @@ class RouterHandler {
         if (needsTwoInputs) {
             return `
                 <input type="text" class="form-input rule-value-input required-field" id="rule-value-1" 
-                       placeholder="Key (e.g., X-Custom-Header)" value="${this.modal.formData.ruleValue1 || ''}" required>
+                       placeholder="Key (e.g., X-Custom-Header)" value="${this.modal.viewer.escapeHtml(this.modal.formData.ruleValue1 || '')}" required>
                 <input type="text" class="form-input rule-value-input required-field" id="rule-value-2" 
-                       placeholder="Value" value="${this.modal.formData.ruleValue2 || ''}" required>
+                       placeholder="Value" value="${this.modal.viewer.escapeHtml(this.modal.formData.ruleValue2 || '')}" required>
             `;
         }
         
         return `
             <input type="text" class="form-input rule-value-input required-field" id="rule-value-1" 
-                   placeholder="${currentType.placeholder}" value="${this.modal.formData.ruleValue1 || ''}" required>
+                   placeholder="${this.modal.viewer.escapeHtml(currentType.placeholder)}" value="${this.modal.viewer.escapeHtml(this.modal.formData.ruleValue1 || '')}" required>
         `;
     }
 
@@ -881,10 +860,14 @@ class RouterHandler {
         const needsTwoInputs = ['Header', 'HeaderRegexp', 'Query', 'QueryRegexp'].includes(this.modal.selectedRuleType);
         
         if (needsTwoInputs) {
-            return `${this.modal.selectedRuleType}(\`${value1}\`, \`${value2}\`)`;
+            return `${this.modal.selectedRuleType}(\`${this.escapeRuleLiteral(value1)}\`, \`${this.escapeRuleLiteral(value2)}\`)`;
         }
         
-        return `${this.modal.selectedRuleType}(\`${value1}\`)`;
+        return `${this.modal.selectedRuleType}(\`${this.escapeRuleLiteral(value1)}\`)`;
+    }
+
+    escapeRuleLiteral(value) {
+        return String(value).replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/[\r\n]/g, '');
     }
 
     renderMiddlewaresConfig(title, body, nextBtn) {
@@ -939,8 +922,13 @@ class RouterHandler {
 
         document.getElementById('add-new-mw-btn')?.addEventListener('click', () => {
             this.modal.saveCurrentStepData();
-            this.modal.formData.returnFromMiddleware = true;
-            this.modal.formData.savedRouterStep = this.modal.currentStep;
+            const routerDraft = JSON.parse(JSON.stringify(this.modal.formData));
+            this.modal.formData = {
+                protocol: this.modal.protocol,
+                returnFromMiddleware: true,
+                savedRouterStep: this.modal.currentStep,
+                routerDraft
+            };
             this.modal.configType = 'middleware';
             this.modal.currentStep = 1;
             this.modal.renderStep();
@@ -988,7 +976,7 @@ class RouterHandler {
             item.draggable = true;
             item.innerHTML = `
                 <span class="middleware-order-number">${index + 1}</span>
-                <span class="middleware-order-name">${mwName}</span>
+                <span class="middleware-order-name">${self.modal.viewer.escapeHtml(mwName)}</span>
                 <button type="button" class="middleware-remove-btn" title="Remove">×</button>
             `;
             return item;
@@ -1036,7 +1024,7 @@ class RouterHandler {
                     btn.type = 'button';
                     btn.className = 'middleware-available-item';
                     btn.dataset.mw = mwName;
-                    btn.innerHTML = `<span>${mwName}</span><span class="middleware-add-icon">+</span>`;
+                    btn.innerHTML = `<span>${self.modal.viewer.escapeHtml(mwName)}</span><span class="middleware-add-icon">+</span>`;
                     availableList.appendChild(btn);
                     btn.addEventListener('click', () => addToSelection(mwName));
                     
@@ -1053,7 +1041,7 @@ class RouterHandler {
             const item = createOrderItem(mwName, index);
             orderList.appendChild(item);
             
-            const availableItem = availableList.querySelector(`[data-mw="${mwName}"]`);
+            const availableItem = [...availableList.querySelectorAll('[data-mw]')].find(item => item.dataset.mw === mwName);
             if (availableItem) availableItem.remove();
             
             bindItemEvents(item);
@@ -1117,7 +1105,7 @@ class RouterHandler {
                         <select id="existing-service" name="existingService" class="form-select required-field" required>
                             <option value="" disabled ${!this.modal.formData.existingService ? 'selected' : ''}>Select an option</option>
                             ${existingServices.map(svc => `
-                                <option value="${svc}" ${this.modal.formData.existingService === svc ? 'selected' : ''}>${svc}</option>
+                                <option value="${this.modal.viewer.escapeHtml(svc)}" ${this.modal.formData.existingService === svc ? 'selected' : ''}>${this.modal.viewer.escapeHtml(svc)}</option>
                             `).join('')}
                         </select>
                     </div>
@@ -1132,7 +1120,7 @@ class RouterHandler {
                     <div class="form-group">
                         <label for="service-name">Service Name <span class="required">*</span></label>
                         <input type="text" id="service-name" name="serviceName" class="form-input required-field" required
-                               placeholder="my-service" value="${this.modal.formData.serviceName || ''}">
+                               placeholder="my-service" value="${this.modal.viewer.escapeHtml(this.modal.formData.serviceName || '')}">
                         <span class="form-hint" id="service-name-hint">Letters, numbers, dashes and underscores only</span>
                         <span class="form-error-hint hidden" id="service-name-error">Service name already exists</span>
                     </div>
@@ -1143,8 +1131,8 @@ class RouterHandler {
                             ${(this.modal.formData.servers && this.modal.formData.servers.length > 0 ? this.modal.formData.servers : ['']).map((server, i) => `
                                 <div class="server-input-row">
                                     <input type="text" name="server-${i}" class="form-input server-input ${i === 0 ? 'required-field' : ''}" 
-                                           placeholder="${serverPlaceholder}"
-                                           value="${server}" ${i === 0 ? 'required' : ''}>
+                                           placeholder="${this.modal.viewer.escapeHtml(serverPlaceholder)}"
+                                           value="${this.modal.viewer.escapeHtml(server)}" ${i === 0 ? 'required' : ''}>
                                     <button type="button" class="remove-server-btn" ${i === 0 ? 'disabled' : ''}>×</button>
                                 </div>
                                 <span class="form-error-hint server-error-hint hidden"></span>

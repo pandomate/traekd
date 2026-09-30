@@ -156,6 +156,22 @@ body.delete-modal-open {
     box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
 }
 
+.delete-btn.confirm {
+    background: linear-gradient(135deg, var(--btn-accent-start, #6366f1), var(--btn-accent-end, #8b5cf6));
+    color: #fff;
+    box-shadow: 0 8px 20px var(--btn-accent-shadow, rgba(99, 102, 241, 0.35));
+}
+
+.confirm-change-list {
+    margin: 0;
+    padding-left: 20px;
+    max-height: 260px;
+    overflow: auto;
+    color: var(--text-secondary, #a1a1aa);
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 0.82rem;
+}
+
 .delete-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;

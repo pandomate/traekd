@@ -1,0 +1,32 @@
+services:
+  traekd:
+    build:
+      context: .
+      args:
+        TRAEKD_UID: ${TRAEKD_UID:-1000}
+        TRAEKD_GID: ${TRAEKD_GID:-1000}
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      TRAEFIK_CONFIG_PATH: /dynamic
+      TRAEKD_CONFIG_ROOT: /dynamic
+      TRAEFIK_YML_FILE: /etc/traefik/traefik.yml
+      TRAEKD_STATIC_CONFIG_ROOT: /etc/traefik
+      TRAEKD_STORAGE_MODE: directory
+      TRAEKD_MANAGED_DIRECTORY: /dynamic
+      TRAEKD_TRAEFIK_VERSION: v3.7
+      # Optional. If omitted, Traekd tests common local/Docker API addresses.
+      # TRAEFIK_API_URL: http://traefik:8080
+      TRAEKD_ADMIN_USER: admin
+      TRAEKD_ADMIN_PASSWORD_HASH: ${TRAEKD_ADMIN_PASSWORD_HASH:?set a scrypt hash}
+      TRAEKD_SESSION_SECRET: ${TRAEKD_SESSION_SECRET:?set a random secret}
+    volumes:
+      - ./dynamic:/dynamic
+      # Read/write is required for the Entry Points editor. Traekd still confines
+      # writes to TRAEKD_STATIC_CONFIG_ROOT and only serializes validated data.
+      - ./traefik.yml:/etc/traefik/traefik.yml:rw
+      - traekd-data:/var/lib/traekd
+    restart: unless-stopped
+
+volumes:
+  traekd-data:

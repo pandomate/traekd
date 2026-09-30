@@ -21,8 +21,20 @@
     --btn-accent-shadow: rgba(99, 102, 241, 0.35);
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html { height: 100%; }
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) var(--bg);
+}
+html { height: 100%; color-scheme: dark; }
+
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: var(--bg); }
+*::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+*::-webkit-scrollbar-corner { background: var(--bg); }
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
@@ -156,6 +168,7 @@ select option:disabled {
 .protocol-badge.http { background: rgba(245, 158, 11, 0.15); color: var(--http); }
 .protocol-badge.tcp { background: rgba(6, 182, 212, 0.15); color: var(--tcp); }
 .protocol-badge.udp { background: rgba(236, 72, 153, 0.15); color: var(--udp); }
+.protocol-badge.aux { background: rgba(99, 102, 241, 0.16); color: #818cf8; }
 
 .nav-item {
     display: flex;
@@ -392,6 +405,11 @@ select option:disabled {
 .item-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .item-card.router .item-dot { background: var(--router); }
 .item-card.middleware .item-dot { background: var(--middleware); }
+.item-card.missing-definition {
+    border-color: rgba(245, 158, 11, 0.65);
+    background: rgba(245, 158, 11, 0.06);
+}
+.item-card.missing-definition .middleware-config-value { color: var(--warning); }
 .item-card.service .item-dot { background: var(--service); }
 .item-card.infrastructure-entry .item-dot { background: var(--http); }
 .item-card.infrastructure-resolver .item-dot { background: var(--tcp); }
@@ -1478,6 +1496,10 @@ select option:disabled {
     color: var(--danger);
 }
 
+.settings-status.muted {
+    color: var(--text-muted);
+}
+
 /* Settings List (domains, resolvers, entry points) */
 .settings-list {
     display: flex;
@@ -1638,3 +1660,51 @@ select option:disabled {
     white-space: pre-wrap;
     word-break: break-word;
 }
+
+.login-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: var(--bg);
+}
+
+.login-screen[hidden] { display: none; }
+
+.login-card {
+    width: min(100%, 380px);
+    display: grid;
+    gap: 12px;
+    padding: 32px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-card);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+}
+
+.login-brand { font-size: 2rem; }
+.login-card h1 { margin: 0; }
+.login-card p { margin: 0 0 8px; color: var(--text-muted); }
+.login-card label { color: var(--text-secondary); font-size: 0.85rem; }
+.login-card input {
+    width: 100%;
+    padding: 11px 12px;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+.login-card input:focus { outline: 2px solid var(--btn-accent-start); outline-offset: 1px; }
+.login-card button {
+    margin-top: 8px;
+    padding: 11px 14px;
+    color: white;
+    background: linear-gradient(135deg, var(--btn-accent-start), var(--btn-accent-end));
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.login-card button:disabled { opacity: 0.65; cursor: wait; }
+.login-error { min-height: 1.25em; color: var(--danger); font-size: 0.85rem; }

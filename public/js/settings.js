@@ -22,12 +22,14 @@ class SettingsManager {
         if (traefikPathInput) {
             traefikPathInput.value = this.settings.traefikYmlPath || '';
         }
-
-        // Render cert resolvers
-        this.renderCertResolvers();
-        
-        // Render entry points
-        this.renderEntryPoints();
+        const storageMode = document.getElementById('settings-storage-mode');
+        const traefikVersion = document.getElementById('settings-traefik-version');
+        const traefikApi = document.getElementById('settings-traefik-api');
+        if (storageMode) storageMode.value = this.settings.storageMode || 'file';
+        if (traefikVersion) traefikVersion.value = this.settings.traefikVersion || 'v3.7';
+        if (traefikApi) traefikApi.value = this.settings.traefikApiUrl || '';
+        this.updateDynamicPathHelp();
+        this.renderTraefikApiStatus();
 
         // Bind events only once
         if (!this.bound) {
@@ -36,40 +38,32 @@ class SettingsManager {
         }
     }
 
-    renderCertResolvers() {
-        const container = document.getElementById('cert-resolvers-list');
-        if (!container) return;
-
-        const resolvers = this.settings.certResolvers || [];
-        
-        if (resolvers.length === 0) {
-            container.innerHTML = '<div class="settings-empty">No certificate resolvers detected. Check your traefik.yml path.</div>';
-            return;
+    renderTraefikApiStatus() {
+        const element = document.getElementById('settings-traefik-api-status');
+        if (!element) return;
+        const status = this.settings.traefikApiStatus || {};
+        if (status.connected) {
+            const source = status.source && status.source !== 'configured' ? `, ${status.message}` : '';
+            element.textContent = `✓ Connected to Traefik ${status.version || ''}${source}`.trim();
+            element.className = 'settings-status success';
+        } else {
+            element.textContent = status.message || 'Not checked yet';
+            element.className = 'settings-status muted';
         }
-
-        container.innerHTML = resolvers.map(name => `
-            <div class="settings-list-item">
-                <span class="settings-list-value">${this.escapeHtml(name)}</span>
-            </div>
-        `).join('');
     }
 
-    renderEntryPoints() {
-        const container = document.getElementById('entry-points-list');
-        if (!container) return;
-
-        const entryPoints = this.settings.entryPoints || [];
-        
-        if (entryPoints.length === 0) {
-            container.innerHTML = '<div class="settings-empty">No entry points detected. Check your traefik.yml path.</div>';
-            return;
+    updateDynamicPathHelp() {
+        const directoryMode = document.getElementById('settings-storage-mode')?.value === 'directory';
+        const input = document.getElementById('settings-config-path');
+        const hint = document.getElementById('settings-config-path-hint');
+        if (input) input.placeholder = directoryMode ? '/etc/traefik/dynamic' : '/etc/traefik/config.yml';
+        if (hint) {
+            const selectedPath = input?.value?.trim();
+            const activePath = directoryMode && selectedPath ? `${selectedPath.replace(/\/+$/, '')}/traekd.yml` : selectedPath;
+            hint.textContent = activePath
+                ? `Generated HTTP/TCP/UDP output: ${activePath}. SQLite remains the source of truth.`
+                : (directoryMode ? 'Select the watched directory that will receive traekd.yml.' : 'Select the generated YAML output file.');
         }
-
-        container.innerHTML = entryPoints.map(name => `
-            <div class="settings-list-item">
-                <span class="settings-list-value">${this.escapeHtml(name)}</span>
-            </div>
-        `).join('');
     }
 
     bindEvents() {
@@ -93,18 +87,21 @@ class SettingsManager {
                 statusEl.className = 'settings-status';
 
                 try {
+                    const expectedType = targetId === 'settings-config-path' && document.getElementById('settings-storage-mode')?.value === 'directory'
+                        ? 'directory'
+                        : 'file';
                     const res = await fetch('/api/settings/validate-path', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ path })
+                        body: JSON.stringify({ path, expectedType, pathKind: targetId === 'settings-traefik-path' ? 'static' : 'dynamic' })
                     });
                     const result = await res.json();
 
-                    if (result.valid && result.isFile) {
+                    if (result.valid) {
                         statusEl.textContent = '✓ Path is valid';
                         statusEl.className = 'settings-status success';
-                    } else if (result.exists && result.isDirectory) {
-                        statusEl.textContent = '✗ Path is a directory, not a file';
+                    } else if (result.exists) {
+                        statusEl.textContent = `✗ Path is not a ${expectedType}`;
                         statusEl.className = 'settings-status error';
                     } else {
                         statusEl.textContent = '✗ File does not exist';
@@ -122,6 +119,50 @@ class SettingsManager {
         if (saveBtn) {
             saveBtn.addEventListener('click', () => this.saveSettings());
         }
+        const passwordBtn = document.getElementById('change-password-btn');
+        if (passwordBtn) passwordBtn.addEventListener('click', () => this.changePassword());
+        const signOutBtn = document.getElementById('sign-out-btn');
+        if (signOutBtn) signOutBtn.addEventListener('click', () => this.signOut());
+        const detectBtn = document.getElementById('detect-traefik-api-btn');
+        if (detectBtn) detectBtn.addEventListener('click', () => this.detectTraefikApi());
+        const storageMode = document.getElementById('settings-storage-mode');
+        if (storageMode) storageMode.addEventListener('change', () => {
+            const input = document.getElementById('settings-config-path');
+            if (input) input.value = storageMode.value === 'directory'
+                ? (this.settings.managedDirectoryDefault || '/etc/traefik/dynamic')
+                : (this.settings.singleFileDefault || './config.yml');
+            this.updateDynamicPathHelp();
+        });
+        const configPath = document.getElementById('settings-config-path');
+        if (configPath) configPath.addEventListener('input', () => this.updateDynamicPathHelp());
+    }
+
+    async detectTraefikApi() {
+        const button = document.getElementById('detect-traefik-api-btn');
+        const status = document.getElementById('settings-traefik-api-status');
+        if (button) button.disabled = true;
+        if (status) { status.textContent = 'Checking accessible Traefik API endpoints…'; status.className = 'settings-status'; }
+        try {
+            const url = document.getElementById('settings-traefik-api')?.value?.trim() || '';
+            const response = await fetch('/api/settings/discover-traefik-api', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url })
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.message || result.error || 'No accessible Traefik API was found');
+            this.settings = result.settings;
+            this.viewer.updateSettingsCache(result.settings);
+            const input = document.getElementById('settings-traefik-api');
+            const version = document.getElementById('settings-traefik-version');
+            if (input) input.value = result.settings.traefikApiUrl || '';
+            if (version) version.value = result.settings.traefikVersion || 'v3.7';
+            this.renderTraefikApiStatus();
+        } catch (error) {
+            if (status) { status.textContent = `✗ ${error.message}`; status.className = 'settings-status error'; }
+        } finally {
+            if (button) button.disabled = false;
+        }
     }
 
     async saveSettings() {
@@ -136,6 +177,9 @@ class SettingsManager {
 
         const configPath = document.getElementById('settings-config-path')?.value?.trim() || '';
         const traefikPath = document.getElementById('settings-traefik-path')?.value?.trim() || '';
+        const storageMode = document.getElementById('settings-storage-mode')?.value || 'file';
+        const traefikVersion = document.getElementById('settings-traefik-version')?.value || 'v3.7';
+        const traefikApiUrl = document.getElementById('settings-traefik-api')?.value?.trim() || '';
 
         try {
             const res = await fetch('/api/settings', {
@@ -143,7 +187,10 @@ class SettingsManager {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     configPath,
-                    traefikYmlPath: traefikPath
+                    traefikYmlPath: traefikPath,
+                    storageMode,
+                    traefikVersion,
+                    traefikApiUrl
                 })
             });
 
@@ -158,12 +205,13 @@ class SettingsManager {
                 // Update viewer's settings cache
                 this.viewer.updateSettingsCache(result.settings);
                 
-                // Re-render to show updated entry points/resolvers
+                // Refresh views that depend on the updated application settings.
                 this.render();
                 
                 // Reload config if path changed
-                await this.viewer.loadConfig();
+                const loaded = await this.viewer.loadConfig();
                 this.viewer.render();
+                if (!loaded) throw new Error('Settings were saved, but the selected configuration source could not be loaded');
             } else {
                 throw new Error(result.error || 'Failed to save');
             }
@@ -174,6 +222,70 @@ class SettingsManager {
             }
         } finally {
             if (saveBtn) saveBtn.disabled = false;
+        }
+    }
+
+    async changePassword() {
+        const currentInput = document.getElementById('settings-current-password');
+        const newInput = document.getElementById('settings-new-password');
+        const confirmInput = document.getElementById('settings-confirm-password');
+        const button = document.getElementById('change-password-btn');
+        const status = document.getElementById('change-password-status');
+        const currentPassword = currentInput?.value || '';
+        const newPassword = newInput?.value || '';
+        if (newPassword.length < 12) {
+            status.textContent = 'New password must be at least 12 characters';
+            status.className = 'settings-save-status error';
+            return;
+        }
+        if (newPassword !== (confirmInput?.value || '')) {
+            status.textContent = 'New passwords do not match';
+            status.className = 'settings-save-status error';
+            return;
+        }
+        button.disabled = true;
+        status.textContent = 'Changing password…';
+        status.className = 'settings-save-status';
+        try {
+            const response = await fetch('/api/v1/auth/password', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ currentPassword, newPassword })
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || 'Password change failed');
+            window.traekdSetCsrf?.(result.csrf);
+            currentInput.value = '';
+            newInput.value = '';
+            confirmInput.value = '';
+            status.textContent = '✓ Password changed; other sessions were signed out';
+            status.className = 'settings-save-status success';
+        } catch (error) {
+            status.textContent = `✗ ${error.message}`;
+            status.className = 'settings-save-status error';
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    async signOut() {
+        const button = document.getElementById('sign-out-btn');
+        const status = document.getElementById('sign-out-status');
+        button.disabled = true;
+        status.textContent = 'Signing out…';
+        status.className = 'settings-save-status';
+        try {
+            const response = await fetch('/api/v1/auth/logout', { method: 'POST' });
+            if (!response.ok) {
+                const result = await response.json().catch(() => ({}));
+                throw new Error(result.error || 'Sign out failed');
+            }
+            window.traekdSetCsrf?.(null);
+            window.location.reload();
+        } catch (error) {
+            status.textContent = `✗ ${error.message}`;
+            status.className = 'settings-save-status error';
+            button.disabled = false;
         }
     }
 

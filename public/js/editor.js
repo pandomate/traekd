@@ -308,7 +308,7 @@ class EditorModal {
 
     renderField(key, value, pathParts) {
         const path = pathParts.join('.');
-        const label = this.formatLabel(key);
+        const label = this.escape(this.formatLabel(key));
         if (Array.isArray(value)) {
             return this.renderArrayField(label, value, path);
         }
@@ -324,7 +324,7 @@ class EditorModal {
             return `
                 <div class="editor-field">
                     <label class="checkbox-label">
-                        <input type="checkbox" class="editor-checkbox" data-path="${path}" ${value ? 'checked' : ''}>
+                        <input type="checkbox" class="editor-checkbox" data-path="${this.escape(path)}" ${value ? 'checked' : ''}>
                         <span>${label}</span>
                     </label>
                 </div>
@@ -335,7 +335,7 @@ class EditorModal {
             return `
                 <div class="editor-field">
                     <label>${label}</label>
-                    <select class="editor-select" data-path="${path}">
+                    <select class="editor-select" data-path="${this.escape(path)}">
                         ${selectOptions.map(opt => `<option value="${this.escape(opt)}" ${opt === value ? 'selected' : ''}>${this.escape(opt)}</option>`).join('')}
                     </select>
                 </div>
@@ -347,7 +347,7 @@ class EditorModal {
         return `
             <div class="editor-field">
                 <label>${label}</label>
-                <input class="editor-input" data-path="${path}" data-type="${typeAttr}" type="${typeAttr}" value="${value ?? ''}" ${datalistAttr}>
+                <input class="editor-input" data-path="${this.escape(path)}" data-type="${typeAttr}" type="${typeAttr}" value="${this.escape(value ?? '')}" ${datalistAttr}>
                 ${datalist ? datalist.html : ''}
             </div>
         `;
@@ -374,7 +374,7 @@ class EditorModal {
             return `
                 <div class="editor-field">
                     <label>${label}</label>
-                    <textarea class="editor-json" data-path="${path}">${JSON.stringify(value, null, 2)}</textarea>
+                    <textarea class="editor-json" data-path="${this.escape(path)}">${this.escape(JSON.stringify(value, null, 2))}</textarea>
                     <p class="editor-field-hint">Edit as JSON array</p>
                 </div>
             `;
@@ -383,7 +383,7 @@ class EditorModal {
         const datalist = options ? this.getDatalist(path, options) : null;
         const datalistAttr = datalist ? `list="${datalist.id}"` : '';
         return `
-            <div class="editor-field editor-pill-field" data-path="${path}">
+            <div class="editor-field editor-pill-field" data-path="${this.escape(path)}">
                 <label>${label}</label>
                 <div class="editor-pill-container">
                     ${value.map((entry, index) => `
@@ -406,7 +406,7 @@ class EditorModal {
         const available = allMiddlewares.filter(mw => !selected.includes(mw));
 
         return `
-            <div class="editor-field editor-middlewares-field" data-path="${path}">
+            <div class="editor-field editor-middlewares-field" data-path="${this.escape(path)}">
                 <label>${label}</label>
                 <div class="editor-middleware-manager">
                     <div class="editor-middleware-available">
@@ -539,7 +539,7 @@ class EditorModal {
                 const item = createOrderItem(mwName, index);
                 orderList.appendChild(item);
                 
-                const availableItem = availableList.querySelector(`[data-mw="${mwName}"]`);
+                const availableItem = [...availableList.querySelectorAll('[data-mw]')].find(item => item.dataset.mw === mwName);
                 if (availableItem) availableItem.remove();
                 
                 bindItemEvents(item);
@@ -567,19 +567,19 @@ class EditorModal {
         const options = this.getEntryPointOptions();
         const current = Array.isArray(value) ? value[0] : (typeof value === 'string' ? value : '');
         const hasCurrent = current && !options.includes(current);
-        const renderOption = (ep, selected) => `<option value="${ep}" ${selected ? 'selected' : ''}>${ep}</option>`;
+        const renderOption = (ep, selected) => `<option value="${this.escape(ep)}" ${selected ? 'selected' : ''}>${this.escape(ep)}</option>`;
         return `
             <div class="editor-field">
                 <label>${label}</label>
                 ${options.length
                     ? `
-                        <select class="editor-select editor-entrypoint-select" data-path="${path}">
+                        <select class="editor-select editor-entrypoint-select" data-path="${this.escape(path)}">
                             <option value="">Select an entry point</option>
                             ${options.map(ep => renderOption(ep, ep === current)).join('')}
                             ${hasCurrent ? renderOption(current, true) : ''}
                         </select>
                     `
-                    : '<div class="editor-list-empty">No entry points configured. Add some in Settings.</div>'}
+                    : '<div class="editor-list-empty">No entry points configured. Add one in AUX → Entry Points.</div>'}
             </div>
         `;
     }
@@ -590,7 +590,7 @@ class EditorModal {
         return `
             <div class="editor-field">
                 <label>${label}</label>
-                <div class="array-input-container" data-name="${path}">
+                <div class="array-input-container" data-name="${this.escape(path)}">
                     <input type="text" class="form-input array-input" placeholder="Enter parent ref and press Enter">
                     <div class="array-items">
                         ${items.map(item => `
@@ -623,7 +623,7 @@ class EditorModal {
 
     renderServersField(label, value = [], path) {
         return `
-            <div class="editor-field editor-servers-field" data-path="${path}">
+            <div class="editor-field editor-servers-field" data-path="${this.escape(path)}">
                 <label>${label}</label>
                 <div class="editor-servers-list">
                     ${value.length
@@ -654,12 +654,12 @@ class EditorModal {
 
     renderServerFieldInput(field, value, basePath) {
         const path = `${basePath}.${field}`;
-        const label = this.formatLabel(field);
+        const label = this.escape(this.formatLabel(field));
         if (typeof value === 'boolean') {
             return `
                 <div class="editor-field editor-inline-field">
                     <label class="checkbox-label">
-                        <input type="checkbox" class="editor-checkbox" data-path="${path}" ${value ? 'checked' : ''}>
+                        <input type="checkbox" class="editor-checkbox" data-path="${this.escape(path)}" ${value ? 'checked' : ''}>
                         <span>${label}</span>
                     </label>
                 </div>
@@ -669,7 +669,7 @@ class EditorModal {
             return `
                 <div class="editor-field">
                     <label>${label}</label>
-                    <input class="editor-input" data-path="${path}" data-type="number" type="number" value="${value}">
+                    <input class="editor-input" data-path="${this.escape(path)}" data-type="number" type="number" value="${value}">
                 </div>
             `;
         }
@@ -677,14 +677,14 @@ class EditorModal {
             return `
                 <div class="editor-field">
                     <label>${label}</label>
-                    <textarea class="editor-json" data-path="${path}">${JSON.stringify(value, null, 2)}</textarea>
+                    <textarea class="editor-json" data-path="${this.escape(path)}">${this.escape(JSON.stringify(value, null, 2))}</textarea>
                 </div>
             `;
         }
         return `
             <div class="editor-field">
                 <label>${label}</label>
-                <input class="editor-input" data-path="${path}" type="text" value="${value ?? ''}">
+                <input class="editor-input" data-path="${this.escape(path)}" type="text" value="${this.escape(value ?? '')}">
             </div>
         `;
     }
@@ -719,7 +719,7 @@ class EditorModal {
         const options = this.getArrayOptions(path) || [];
         const datalist = this.getDatalist(path, options);
         return `
-            <div class="editor-field editor-list-field" data-path="${path}">
+            <div class="editor-field editor-list-field" data-path="${this.escape(path)}">
                 <label>${label}</label>
                 <div class="editor-list-items">
                     ${value.length ? value.map((item, index) => `
@@ -744,7 +744,7 @@ class EditorModal {
 
     renderDomainsField(label, value, path) {
         return `
-            <div class="editor-field editor-domains-field" data-path="${path}">
+            <div class="editor-field editor-domains-field" data-path="${this.escape(path)}">
                 <label>${label}</label>
                 <div class="editor-domains-list">
                     ${value.length ? value.map((domain, index) => this.renderDomainCard(domain || {}, path, index)).join('') : '<p class="editor-list-empty">No domains configured.</p>'}
@@ -766,7 +766,7 @@ class EditorModal {
                 </div>
                 <div class="editor-field">
                     <label>Main</label>
-                    <input type="text" class="editor-input" data-path="${path}.${index}.main" value="${main}">
+                    <input type="text" class="editor-input" data-path="${this.escape(`${path}.${index}.main`)}" value="${this.escape(main)}">
                 </div>
                 <div class="editor-field editor-pill-field" data-path="${sansPath}">
                     <label>SANs</label>
@@ -915,10 +915,10 @@ class EditorModal {
             this.saving = true;
             this.updatePrimaryState();
             this.status('Saving changes…', 'info');
-            const response = await fetch(`/api/config/${this.context.section}/${encodeURIComponent(this.context.name)}`, {
+            const response = await fetch(`/api/v1/config/${encodeURIComponent(this.context.protocol)}/${encodeURIComponent(this.context.section)}/${encodeURIComponent(this.context.name)}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ data: this.state })
+                headers: { 'Content-Type': 'application/json', 'If-Match': this.viewer.revision || '' },
+                body: JSON.stringify({ data: this.state, protocol: this.context.protocol, revision: this.viewer.revision })
             });
             const payload = await response.json();
             if (!response.ok) {
@@ -960,7 +960,9 @@ class EditorModal {
     getDatalist(path, options) {
         const opts = options || this.getArrayOptions(path);
         if (!opts || !opts.length) return null;
-        const id = `editor-list-${path.replace(/[.\s]/g, '-')}`;
+        const safePath = path.replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 80);
+        const pathHash = Array.from(path).reduce((hash, char) => ((hash * 33) ^ char.charCodeAt(0)) >>> 0, 5381).toString(16);
+        const id = `editor-list-${safePath}-${pathHash}`;
         const html = `<datalist id="${id}">${opts.map((opt) => `<option value="${this.escape(opt)}"></option>`).join('')}</datalist>`;
         return { id, html };
     }
@@ -1028,6 +1030,7 @@ class EditorModal {
 
     shouldRemoveValue(value) {
         if (value === null || value === undefined) return true;
+        if (typeof value === 'string') return value.trim() === '';
         if (Array.isArray(value)) return value.length === 0;
         if (typeof value === 'object') return Object.keys(value).length === 0;
         return false;

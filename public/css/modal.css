@@ -1,4 +1,8 @@
 /* Config Modal Styles - Core Modal Structure */
+body.config-modal-open {
+    overflow: hidden;
+}
+
 .config-modal {
     display: none;
     position: fixed;

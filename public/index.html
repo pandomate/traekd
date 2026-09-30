@@ -12,8 +12,22 @@
     <link rel="stylesheet" href="/css/delete.css">
 </head>
 <body>
+    <section id="login-screen" class="login-screen" hidden aria-labelledby="login-title">
+        <form id="login-form" class="login-card">
+            <div class="brand-icon login-brand">◈</div>
+            <h1 id="login-title">Traekd Admin</h1>
+            <p>Sign in to manage the Traefik configuration.</p>
+            <label for="login-username">Username</label>
+            <input id="login-username" name="username" type="text" autocomplete="username" maxlength="128" required autofocus>
+            <label for="login-password">Password</label>
+            <input id="login-password" name="password" type="password" autocomplete="current-password" maxlength="1024" required>
+            <button id="login-submit" type="submit">Sign in</button>
+            <div id="login-error" class="login-error" role="alert"></div>
+        </form>
+    </section>
+
     <!-- Single Mobile Menu Toggle Button - transforms between hamburger and X -->
-    <button class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+    <button type="button" class="mobile-menu-toggle" id="mobile-menu-toggle" aria-label="Toggle menu" aria-expanded="false">
         <div class="menu-icon">
             <span></span>
             <span></span>
@@ -34,7 +48,7 @@
 
             <nav class="sidebar-nav">
                 <div class="nav-section">
-                    <button class="nav-item active" data-view="overview">
+                    <button type="button" class="nav-item active" data-view="overview">
                         <span class="nav-icon">◉</span>
                         <span class="nav-label">Overview</span>
                     </button>
@@ -44,19 +58,19 @@
                 <div class="nav-section">
                     <div class="nav-section-title">
                         <span class="protocol-badge http">HTTP</span>
-                        <button class="nav-add-btn" data-protocol="http" title="Add HTTP item">+</button>
+                        <button type="button" class="nav-add-btn" data-protocol="http" title="Add HTTP item">+</button>
                     </div>
-                    <button class="nav-item" data-view="http-routers">
+                    <button type="button" class="nav-item" data-view="http-routers">
                         <span class="nav-icon nav-router">●</span>
                         <span class="nav-label">Routers</span>
                         <span class="nav-badge" id="nav-http-router-count">0</span>
                     </button>
-                    <button class="nav-item" data-view="http-middlewares">
+                    <button type="button" class="nav-item" data-view="http-middlewares">
                         <span class="nav-icon nav-middleware">●</span>
                         <span class="nav-label">Middlewares</span>
                         <span class="nav-badge" id="nav-http-middleware-count">0</span>
                     </button>
-                    <button class="nav-item" data-view="http-services">
+                    <button type="button" class="nav-item" data-view="http-services">
                         <span class="nav-icon nav-service">●</span>
                         <span class="nav-label">Services</span>
                         <span class="nav-badge" id="nav-http-service-count">0</span>
@@ -67,19 +81,19 @@
                 <div class="nav-section">
                     <div class="nav-section-title">
                         <span class="protocol-badge tcp">TCP</span>
-                        <button class="nav-add-btn" data-protocol="tcp" title="Add TCP item">+</button>
+                        <button type="button" class="nav-add-btn" data-protocol="tcp" title="Add TCP item">+</button>
                     </div>
-                    <button class="nav-item" data-view="tcp-routers">
+                    <button type="button" class="nav-item" data-view="tcp-routers">
                         <span class="nav-icon nav-router">●</span>
                         <span class="nav-label">Routers</span>
                         <span class="nav-badge" id="nav-tcp-router-count">0</span>
                     </button>
-                    <button class="nav-item" data-view="tcp-middlewares">
+                    <button type="button" class="nav-item" data-view="tcp-middlewares">
                         <span class="nav-icon nav-middleware">●</span>
                         <span class="nav-label">Middlewares</span>
                         <span class="nav-badge" id="nav-tcp-middleware-count">0</span>
                     </button>
-                    <button class="nav-item" data-view="tcp-services">
+                    <button type="button" class="nav-item" data-view="tcp-services">
                         <span class="nav-icon nav-service">●</span>
                         <span class="nav-label">Services</span>
                         <span class="nav-badge" id="nav-tcp-service-count">0</span>
@@ -90,14 +104,14 @@
                 <div class="nav-section">
                     <div class="nav-section-title">
                         <span class="protocol-badge udp">UDP</span>
-                        <button class="nav-add-btn" data-protocol="udp" title="Add UDP item">+</button>
+                        <button type="button" class="nav-add-btn" data-protocol="udp" title="Add UDP item">+</button>
                     </div>
-                    <button class="nav-item" data-view="udp-routers">
+                    <button type="button" class="nav-item" data-view="udp-routers">
                         <span class="nav-icon nav-router">●</span>
                         <span class="nav-label">Routers</span>
                         <span class="nav-badge" id="nav-udp-router-count">0</span>
                     </button>
-                    <button class="nav-item" data-view="udp-services">
+                    <button type="button" class="nav-item" data-view="udp-services">
                         <span class="nav-icon nav-service">●</span>
                         <span class="nav-label">Services</span>
                         <span class="nav-badge" id="nav-udp-service-count">0</span>
@@ -105,17 +119,17 @@
                 </div>
 
                 <div class="nav-section">
-                    <div class="nav-section-title">View</div>
-                    <button class="nav-item" data-view="yaml">
+                    <div class="nav-section-title"><span class="protocol-badge aux">AUX</span></div>
+                    <button type="button" class="nav-item" data-view="yaml">
                         <span class="nav-icon">{ }</span>
                         <span class="nav-label">Raw YAML</span>
                     </button>
-                    <button class="nav-item" data-view="entry-points">
+                    <button type="button" class="nav-item" data-view="entry-points">
                         <span class="nav-icon">◎</span>
                         <span class="nav-label">Entry Points</span>
                         <span class="nav-badge" id="nav-entry-point-count">0</span>
                     </button>
-                    <button class="nav-item" data-view="cert-resolvers">
+                    <button type="button" class="nav-item" data-view="cert-resolvers">
                         <span class="nav-icon">☁</span>
                         <span class="nav-label">Certificate Resolvers</span>
                         <span class="nav-badge" id="nav-cert-resolver-count">0</span>
@@ -124,9 +138,13 @@
 
                 <div class="nav-section">
                     <div class="nav-section-title">System</div>
-                    <button class="nav-item" data-view="settings">
+                    <button type="button" class="nav-item" data-view="settings">
                         <span class="nav-icon">⚙</span>
                         <span class="nav-label">Settings</span>
+                    </button>
+                    <button type="button" class="nav-item" data-view="account">
+                        <span class="nav-icon">●</span>
+                        <span class="nav-label">Account</span>
                     </button>
                 </div>
             </nav>
@@ -225,10 +243,10 @@
                         <div class="section-controls">
                             <div class="filter-group">
                                 <span class="filter-label">Sort:</span>
-                                <button class="filter-btn" data-protocol="http" data-sort="name-asc">A-Z</button>
-                                <button class="filter-btn" data-protocol="http" data-sort="name-desc">Z-A</button>
-                                <button class="filter-btn" data-protocol="http" data-sort="ip-asc">IP ↑</button>
-                                <button class="filter-btn" data-protocol="http" data-sort="ip-desc">IP ↓</button>
+                                <button type="button" class="filter-btn" data-protocol="http" data-sort="name-asc">A-Z</button>
+                                <button type="button" class="filter-btn" data-protocol="http" data-sort="name-desc">Z-A</button>
+                                <button type="button" class="filter-btn" data-protocol="http" data-sort="ip-asc">IP ↑</button>
+                                <button type="button" class="filter-btn" data-protocol="http" data-sort="ip-desc">IP ↓</button>
                             </div>
                             <div class="search-box">
                                 <span class="search-icon">⌕</span>
@@ -248,10 +266,10 @@
                         <div class="section-controls">
                             <div class="filter-group">
                                 <span class="filter-label">Sort:</span>
-                                <button class="filter-btn" data-protocol="tcp" data-sort="name-asc">A-Z</button>
-                                <button class="filter-btn" data-protocol="tcp" data-sort="name-desc">Z-A</button>
-                                <button class="filter-btn" data-protocol="tcp" data-sort="ip-asc">IP ↑</button>
-                                <button class="filter-btn" data-protocol="tcp" data-sort="ip-desc">IP ↓</button>
+                                <button type="button" class="filter-btn" data-protocol="tcp" data-sort="name-asc">A-Z</button>
+                                <button type="button" class="filter-btn" data-protocol="tcp" data-sort="name-desc">Z-A</button>
+                                <button type="button" class="filter-btn" data-protocol="tcp" data-sort="ip-asc">IP ↑</button>
+                                <button type="button" class="filter-btn" data-protocol="tcp" data-sort="ip-desc">IP ↓</button>
                             </div>
                             <div class="search-box">
                                 <span class="search-icon">⌕</span>
@@ -271,10 +289,10 @@
                         <div class="section-controls">
                             <div class="filter-group">
                                 <span class="filter-label">Sort:</span>
-                                <button class="filter-btn" data-protocol="udp" data-sort="name-asc">A-Z</button>
-                                <button class="filter-btn" data-protocol="udp" data-sort="name-desc">Z-A</button>
-                                <button class="filter-btn" data-protocol="udp" data-sort="ip-asc">IP ↑</button>
-                                <button class="filter-btn" data-protocol="udp" data-sort="ip-desc">IP ↓</button>
+                                <button type="button" class="filter-btn" data-protocol="udp" data-sort="name-asc">A-Z</button>
+                                <button type="button" class="filter-btn" data-protocol="udp" data-sort="name-desc">Z-A</button>
+                                <button type="button" class="filter-btn" data-protocol="udp" data-sort="ip-asc">IP ↑</button>
+                                <button type="button" class="filter-btn" data-protocol="udp" data-sort="ip-desc">IP ↓</button>
                             </div>
                             <div class="search-box">
                                 <span class="search-icon">⌕</span>
@@ -310,8 +328,8 @@
                         <div class="view-controls">
                             <div class="filter-group">
                                 <span class="filter-label">Sort:</span>
-                                <button class="filter-btn section-filter" data-protocol="http" data-type="routers" data-sort="name-asc">A-Z</button>
-                                <button class="filter-btn section-filter" data-protocol="http" data-type="routers" data-sort="name-desc">Z-A</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="http" data-type="routers" data-sort="name-asc">A-Z</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="http" data-type="routers" data-sort="name-desc">Z-A</button>
                             </div>
                             <div class="search-box view-search">
                                 <span class="search-icon">⌕</span>
@@ -334,8 +352,8 @@
                         <div class="view-controls">
                             <div class="filter-group">
                                 <span class="filter-label">Sort:</span>
-                                <button class="filter-btn section-filter" data-protocol="http" data-type="middlewares" data-sort="name-asc">A-Z</button>
-                                <button class="filter-btn section-filter" data-protocol="http" data-type="middlewares" data-sort="name-desc">Z-A</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="http" data-type="middlewares" data-sort="name-asc">A-Z</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="http" data-type="middlewares" data-sort="name-desc">Z-A</button>
                             </div>
                             <div class="search-box view-search">
                                 <span class="search-icon">⌕</span>
@@ -358,10 +376,10 @@
                         <div class="view-controls">
                             <div class="filter-group">
                                 <span class="filter-label">Sort:</span>
-                                <button class="filter-btn section-filter" data-protocol="http" data-type="services" data-sort="name-asc">A-Z</button>
-                                <button class="filter-btn section-filter" data-protocol="http" data-type="services" data-sort="name-desc">Z-A</button>
-                                <button class="filter-btn section-filter" data-protocol="http" data-type="services" data-sort="ip-asc">IP ↑</button>
-                                <button class="filter-btn section-filter" data-protocol="http" data-type="services" data-sort="ip-desc">IP ↓</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="http" data-type="services" data-sort="name-asc">A-Z</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="http" data-type="services" data-sort="name-desc">Z-A</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="http" data-type="services" data-sort="ip-asc">IP ↑</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="http" data-type="services" data-sort="ip-desc">IP ↓</button>
                             </div>
                             <div class="search-box view-search">
                                 <span class="search-icon">⌕</span>
@@ -384,8 +402,8 @@
                         <div class="view-controls">
                             <div class="filter-group">
                                 <span class="filter-label">Sort:</span>
-                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="routers" data-sort="name-asc">A-Z</button>
-                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="routers" data-sort="name-desc">Z-A</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="tcp" data-type="routers" data-sort="name-asc">A-Z</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="tcp" data-type="routers" data-sort="name-desc">Z-A</button>
                             </div>
                             <div class="search-box view-search">
                                 <span class="search-icon">⌕</span>
@@ -408,8 +426,8 @@
                         <div class="view-controls">
                             <div class="filter-group">
                                 <span class="filter-label">Sort:</span>
-                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="middlewares" data-sort="name-asc">A-Z</button>
-                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="middlewares" data-sort="name-desc">Z-A</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="tcp" data-type="middlewares" data-sort="name-asc">A-Z</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="tcp" data-type="middlewares" data-sort="name-desc">Z-A</button>
                             </div>
                             <div class="search-box view-search">
                                 <span class="search-icon">⌕</span>
@@ -432,10 +450,10 @@
                         <div class="view-controls">
                             <div class="filter-group">
                                 <span class="filter-label">Sort:</span>
-                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="services" data-sort="name-asc">A-Z</button>
-                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="services" data-sort="name-desc">Z-A</button>
-                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="services" data-sort="ip-asc">IP ↑</button>
-                                <button class="filter-btn section-filter" data-protocol="tcp" data-type="services" data-sort="ip-desc">IP ↓</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="tcp" data-type="services" data-sort="name-asc">A-Z</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="tcp" data-type="services" data-sort="name-desc">Z-A</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="tcp" data-type="services" data-sort="ip-asc">IP ↑</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="tcp" data-type="services" data-sort="ip-desc">IP ↓</button>
                             </div>
                             <div class="search-box view-search">
                                 <span class="search-icon">⌕</span>
@@ -458,8 +476,8 @@
                         <div class="view-controls">
                             <div class="filter-group">
                                 <span class="filter-label">Sort:</span>
-                                <button class="filter-btn section-filter" data-protocol="udp" data-type="routers" data-sort="name-asc">A-Z</button>
-                                <button class="filter-btn section-filter" data-protocol="udp" data-type="routers" data-sort="name-desc">Z-A</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="udp" data-type="routers" data-sort="name-asc">A-Z</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="udp" data-type="routers" data-sort="name-desc">Z-A</button>
                             </div>
                             <div class="search-box view-search">
                                 <span class="search-icon">⌕</span>
@@ -482,10 +500,10 @@
                         <div class="view-controls">
                             <div class="filter-group">
                                 <span class="filter-label">Sort:</span>
-                                <button class="filter-btn section-filter" data-protocol="udp" data-type="services" data-sort="name-asc">A-Z</button>
-                                <button class="filter-btn section-filter" data-protocol="udp" data-type="services" data-sort="name-desc">Z-A</button>
-                                <button class="filter-btn section-filter" data-protocol="udp" data-type="services" data-sort="ip-asc">IP ↑</button>
-                                <button class="filter-btn section-filter" data-protocol="udp" data-type="services" data-sort="ip-desc">IP ↓</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="udp" data-type="services" data-sort="name-asc">A-Z</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="udp" data-type="services" data-sort="name-desc">Z-A</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="udp" data-type="services" data-sort="ip-asc">IP ↑</button>
+                                <button type="button" class="filter-btn section-filter" data-protocol="udp" data-type="services" data-sort="ip-desc">IP ↓</button>
                             </div>
                             <div class="search-box view-search">
                                 <span class="search-icon">⌕</span>
@@ -504,15 +522,15 @@
             <section id="view-yaml" class="view">
                 <header class="view-header">
                     <h1>Raw YAML</h1>
-                    <p class="view-desc">Complete configuration file</p>
+                    <p class="view-desc">Safely propose YAML changes; accepted documents are validated, stored in SQLite, and re-rendered</p>
                 </header>
                 <div class="yaml-box">
                     <div class="yaml-editor-container">
-                        <textarea id="yaml-editor" spellcheck="false"></textarea>
+                        <textarea id="yaml-editor" spellcheck="false" maxlength="1048576" aria-label="YAML configuration proposal"></textarea>
                     </div>
                     <div class="yaml-actions">
-                        <button type="button" id="yaml-save-btn" disabled>Save YAML</button>
-                        <button type="button" id="yaml-reset-btn">Reset</button>
+                        <button type="button" id="yaml-save-btn" disabled>Review &amp; Apply</button>
+                        <button type="button" id="yaml-reset-btn">Refresh</button>
                         <span id="yaml-status" data-variant="muted"></span>
                     </div>
                 </div>
@@ -520,8 +538,13 @@
 
             <section id="view-entry-points" class="view">
                 <header class="view-header">
-                    <h1>Entry Points</h1>
-                    <p class="view-desc">Entry points discovered in traefik.yml</p>
+                    <div class="view-header-row">
+                        <div>
+                            <h1>Entry Points</h1>
+                            <p class="view-desc">Listen addresses managed in traefik.yml</p>
+                        </div>
+                        <button type="button" class="settings-save-btn" id="entry-point-add">Add Entry Point</button>
+                    </div>
                 </header>
                 <div class="items-grid" id="entry-points-view-list"></div>
             </section>
@@ -544,27 +567,27 @@
                 <div class="settings-container">
                     <!-- Paths Section -->
                     <div class="settings-section">
-                        <h3 class="settings-section-title">Configuration Paths</h3>
-                        <p class="settings-section-desc">Configure the paths to your Traefik configuration files</p>
+                        <h3 class="settings-section-title">Configuration Files</h3>
+                        <p class="settings-section-desc">Choose where database-backed configuration is rendered for Traefik to watch.</p>
                         
                         <div class="settings-form">
                             <div class="settings-field">
-                                <label for="settings-config-path">Dynamic Config Path</label>
+                                <label for="settings-config-path">Generated Dynamic YAML Output</label>
                                 <div class="settings-input-group">
-                                    <input type="text" id="settings-config-path" class="settings-input" 
+                                    <input type="text" id="settings-config-path" class="settings-input" maxlength="4096"
                                            placeholder="/etc/traefik/config.yml">
                                     <button type="button" class="settings-validate-btn" data-target="settings-config-path">
                                         Validate
                                     </button>
                                 </div>
-                                <span class="settings-hint">Path to your Traefik file provider config (config.yml)</span>
+                                <span class="settings-hint" id="settings-config-path-hint">Output only: Traekd does not read this file after the initial database migration.</span>
                                 <span class="settings-status" id="settings-config-path-status"></span>
                             </div>
                             
                             <div class="settings-field">
                                 <label for="settings-traefik-path">Traefik Main Config Path</label>
                                 <div class="settings-input-group">
-                                    <input type="text" id="settings-traefik-path" class="settings-input" 
+                                    <input type="text" id="settings-traefik-path" class="settings-input" maxlength="4096"
                                            placeholder="/etc/traefik/traefik.yml">
                                     <button type="button" class="settings-validate-btn" data-target="settings-traefik-path">
                                         Validate
@@ -573,21 +596,31 @@
                                 <span class="settings-hint">Path to your main Traefik configuration file (traefik.yml)</span>
                                 <span class="settings-status" id="settings-traefik-path-status"></span>
                             </div>
+                            <div class="settings-field">
+                                <label for="settings-storage-mode">Dynamic Config Mode</label>
+                                <select id="settings-storage-mode" class="settings-input">
+                                    <option value="directory">Managed directory (recommended)</option>
+                                    <option value="file">Existing single file</option>
+                                </select>
+                                <span class="settings-hint">Directory mode writes only traekd.yml inside the watched directory.</span>
+                            </div>
+                            <div class="settings-field">
+                                <label for="settings-traefik-version">Traefik Compatibility</label>
+                                <select id="settings-traefik-version" class="settings-input">
+                                    <option value="v3.7">Traefik v3.7</option>
+                                    <option value="v2.11">Traefik v2.11</option>
+                                </select>
+                            </div>
+                            <div class="settings-field">
+                                <label for="settings-traefik-api">Optional Traefik API URL</label>
+                                <div class="settings-input-group">
+                                    <input type="url" id="settings-traefik-api" class="settings-input" maxlength="2048" placeholder="http://traefik:8080">
+                                    <button type="button" class="settings-validate-btn" id="detect-traefik-api-btn">Detect</button>
+                                </div>
+                                <span class="settings-hint">Server-side detection checks common local/Docker addresses and configured api@internal routes.</span>
+                                <span class="settings-status" id="settings-traefik-api-status"></span>
+                            </div>
                         </div>
-                    </div>
-
-                    <!-- Certificate Resolvers Section -->
-                    <div class="settings-section">
-                        <h3 class="settings-section-title">Certificate Resolvers</h3>
-                        <p class="settings-section-desc">Resolvers detected from traefik.yml (read-only)</p>
-                        <div class="settings-list" id="cert-resolvers-list"></div>
-                    </div>
-
-                    <!-- Entry Points Section -->
-                    <div class="settings-section">
-                        <h3 class="settings-section-title">Entry Points</h3>
-                        <p class="settings-section-desc">Entry points detected from traefik.yml (read-only)</p>
-                        <div class="settings-list" id="entry-points-list"></div>
                     </div>
 
                     <!-- Save Button -->
@@ -596,6 +629,46 @@
                             Save Settings
                         </button>
                         <span class="settings-save-status" id="settings-save-status"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="view-account" class="view">
+                <header class="view-header">
+                    <h1>Account</h1>
+                    <p class="view-desc">Manage administrator credentials and sessions</p>
+                </header>
+                <div class="settings-container">
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">Administrator Password</h3>
+                        <p class="settings-section-desc">Changing the password signs out every other active session.</p>
+                        <div class="settings-form">
+                            <div class="settings-field">
+                                <label for="settings-current-password">Current password</label>
+                                <input type="password" id="settings-current-password" class="settings-input" autocomplete="current-password" maxlength="1024">
+                            </div>
+                            <div class="settings-field">
+                                <label for="settings-new-password">New password</label>
+                                <input type="password" id="settings-new-password" class="settings-input" autocomplete="new-password" minlength="12" maxlength="1024">
+                                <span class="settings-hint">At least 12 characters.</span>
+                            </div>
+                            <div class="settings-field">
+                                <label for="settings-confirm-password">Confirm new password</label>
+                                <input type="password" id="settings-confirm-password" class="settings-input" autocomplete="new-password" minlength="12" maxlength="1024">
+                            </div>
+                            <div class="settings-actions">
+                                <button type="button" class="settings-save-btn" id="change-password-btn">Change Password</button>
+                                <span class="settings-save-status" id="change-password-status"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">Session</h3>
+                        <p class="settings-section-desc">End this administrator session on this browser.</p>
+                        <div class="settings-actions">
+                            <button type="button" class="delete-btn danger" id="sign-out-btn">Sign Out</button>
+                            <span class="settings-save-status" id="sign-out-status"></span>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -614,7 +687,7 @@
                 <div class="drawer-actions">
                     <button class="drawer-edit" id="drawer-edit" type="button">Edit</button>
                     <button class="drawer-delete" id="drawer-delete" type="button" hidden>Delete</button>
-                    <button class="drawer-close" id="drawer-close">✕</button>
+                    <button type="button" class="drawer-close" id="drawer-close">✕</button>
                 </div>
             </header>
 
@@ -655,7 +728,60 @@
         </div>
     </div>
 
+    <div id="confirm-modal" class="delete-modal hidden" role="presentation">
+        <div class="delete-backdrop" data-confirm-cancel></div>
+        <div class="delete-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title">
+            <div class="delete-dialog-header">
+                <h3 class="delete-modal-title" id="confirm-modal-title">Confirm change</h3>
+                <button type="button" class="delete-close-btn" data-confirm-cancel aria-label="Close">✕</button>
+            </div>
+            <div class="delete-modal-body" id="confirm-modal-body"></div>
+            <div class="delete-modal-actions">
+                <button type="button" class="delete-btn secondary" data-confirm-cancel>Cancel</button>
+                <button type="button" class="delete-btn confirm" id="confirm-modal-accept">Apply changes</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="entry-point-modal" class="delete-modal hidden" role="presentation">
+        <div class="delete-backdrop" data-entry-point-cancel></div>
+        <form id="entry-point-form" class="delete-dialog" role="dialog" aria-modal="true" aria-labelledby="entry-point-modal-title">
+            <div class="delete-dialog-header">
+                <h3 class="delete-modal-title" id="entry-point-modal-title">Add Entry Point</h3>
+                <button type="button" class="delete-close-btn" data-entry-point-cancel aria-label="Close">✕</button>
+            </div>
+            <div class="delete-modal-body">
+                <div class="settings-field">
+                    <label for="entry-point-name">Name</label>
+                    <input id="entry-point-name" class="settings-input" required maxlength="64" pattern="[A-Za-z0-9_-]+" autocomplete="off">
+                </div>
+                <div class="settings-field">
+                    <label for="entry-point-address">Listen address</label>
+                    <input id="entry-point-address" class="settings-input" required maxlength="255" placeholder=":443 or :53/udp" autocomplete="off">
+                    <span class="settings-hint">Use host:port, :port, or :port/tcp|udp.</span>
+                </div>
+                <label class="delete-checkbox"><input type="checkbox" id="entry-point-default"><span>Use as a default entry point</span></label>
+                <label class="delete-checkbox"><input type="checkbox" id="entry-point-reuse-port"><span>Enable port reuse</span></label>
+                <div class="settings-field">
+                    <label for="entry-point-redirect-target">HTTP redirect target (optional)</label>
+                    <input id="entry-point-redirect-target" class="settings-input" maxlength="64" pattern="[A-Za-z0-9_-]*" placeholder="websecure" autocomplete="off">
+                </div>
+                <div class="settings-field">
+                    <label for="entry-point-redirect-scheme">Redirect scheme</label>
+                    <select id="entry-point-redirect-scheme" class="settings-input"><option value="https">https</option><option value="http">http</option></select>
+                </div>
+                <label class="delete-checkbox"><input type="checkbox" id="entry-point-redirect-permanent" checked><span>Permanent redirect</span></label>
+            </div>
+            <div class="delete-modal-status" id="entry-point-status"></div>
+            <div class="delete-modal-actions">
+                <button type="button" class="delete-btn secondary" data-entry-point-cancel>Cancel</button>
+                <button type="submit" class="delete-btn confirm" id="entry-point-save">Save Entry Point</button>
+            </div>
+        </form>
+    </div>
+
     <!-- Load scripts in correct order -->
+    <script src="/js/auth.js"></script>
     <script src="/js/settings.js"></script>
     <script src="/js/delete.js"></script>
     <script src="/js/app.js"></script>
@@ -663,15 +789,6 @@
     <script src="/js/routers.js"></script>
     <script src="/js/modal.js"></script>
     <script src="/js/editor.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                if (window.traefik) {
-                    window.configModal = new ConfigModal(window.traefik);
-                    window.editorModal = new EditorModal(window.traefik);
-                }
-            }, 100);
-        });
-    </script>
+    <script src="/js/bootstrap.js"></script>
 </body>
 </html>

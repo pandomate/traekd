@@ -13,14 +13,8 @@ class MiddlewareHandler {
 
     // Reset all middleware-specific form data
     resetMiddlewareData() {
-        const keysToRemove = ['name', 'middlewareType', 'chainOrder'];
-        // Remove all keys that start with a middleware type prefix
-        const allKeys = Object.keys(this.modal.formData);
-        allKeys.forEach(key => {
-            if (key.includes('.') || keysToRemove.includes(key)) {
-                delete this.modal.formData[key];
-            }
-        });
+        const { protocol, configType } = this.modal.formData;
+        this.modal.formData = { protocol, configType };
     }
 
     validateStep(step, body) {
@@ -106,7 +100,7 @@ class MiddlewareHandler {
                 </div>
                 <div class="middleware-type-grid" id="mw-type-grid">
                     ${middlewareTypes.map(mw => `
-                        <button class="middleware-type-option" data-type="${mw.key}">
+                        <button type="button" class="middleware-type-option" data-type="${mw.key}">
                             <span class="mw-type-name">${this.formatMiddlewareKey(mw.key)}</span>
                             <span class="mw-type-desc">${mw.description}</span>
                         </button>
@@ -120,7 +114,7 @@ class MiddlewareHandler {
             document.querySelectorAll('.middleware-type-option').forEach(opt => {
                 const name = opt.dataset.type.toLowerCase();
                 const displayName = opt.querySelector('.mw-type-name')?.textContent.toLowerCase() || '';
-                opt.style.display = (name.includes(search) || displayName.includes(search)) ? '' : 'none';
+                opt.hidden = !(name.includes(search) || displayName.includes(search));
             });
         });
 
@@ -152,7 +146,7 @@ class MiddlewareHandler {
                 <div class="form-group">
                     <label for="mw-name">Middleware Name <span class="required">*</span></label>
                     <input type="text" id="mw-name" name="name" class="form-input required-field" required 
-                           placeholder="my-${mwType.toLowerCase()}" value="">
+                           placeholder="my-${mwType.toLowerCase()}" value="${this.modal.viewer.escapeHtml(this.modal.formData.name || '')}">
                     <span class="form-hint">Letters, numbers, dashes and underscores only</span>
                 </div>
                 
@@ -173,7 +167,7 @@ class MiddlewareHandler {
         fields.forEach(field => {
             if (field.type === 'boolean' && field.defaultValue !== undefined) {
                 const checkbox = body.querySelector(`input[name="${mwType}.${field.key}"]`);
-                if (checkbox) checkbox.checked = field.defaultValue;
+                if (checkbox && this.modal.formData[`${mwType}.${field.key}`] === undefined) checkbox.checked = field.defaultValue;
             }
         });
     }
@@ -183,13 +177,14 @@ class MiddlewareHandler {
         const fieldName = `${mwType}.${field.key}`;
         const required = field.required ? '<span class="required">*</span>' : '';
         const requiredClass = field.required ? 'required-field' : '';
+        const savedValue = this.modal.formData[fieldName];
 
         switch (field.type) {
             case 'boolean':
                 return `
                     <div class="form-group">
                         <label class="checkbox-label">
-                            <input type="checkbox" name="${fieldName}">
+                            <input type="checkbox" name="${fieldName}" ${savedValue ? 'checked' : ''}>
                             <span>${field.label} ${required}</span>
                         </label>
                     </div>
@@ -199,7 +194,7 @@ class MiddlewareHandler {
                     <div class="form-group">
                         <label for="${fieldId}">${field.label} ${required}</label>
                         <input type="number" id="${fieldId}" name="${fieldName}" class="form-input ${requiredClass}" 
-                               placeholder="${field.placeholder || ''}">
+                               placeholder="${field.placeholder || ''}" value="${this.modal.viewer.escapeHtml(savedValue ?? '')}">
                     </div>
                 `;
             case 'duration':
@@ -207,7 +202,7 @@ class MiddlewareHandler {
                     <div class="form-group">
                         <label for="${fieldId}">${field.label} ${required}</label>
                         <input type="text" id="${fieldId}" name="${fieldName}" class="form-input ${requiredClass}" 
-                               placeholder="${field.placeholder || 'e.g., 30s, 5m'}">
+                               placeholder="${field.placeholder || 'e.g., 30s, 5m'}" value="${this.modal.viewer.escapeHtml(savedValue ?? '')}">
                         <span class="form-hint">Duration format: 100ms, 30s, 5m, 1h</span>
                     </div>
                 `;
@@ -218,7 +213,7 @@ class MiddlewareHandler {
                         <div class="array-input-container ${requiredClass}" data-name="${fieldName}">
                             <input type="text" class="form-input array-input" 
                                    placeholder="${field.placeholder || 'Add item and press Enter'}">
-                            <div class="array-items"></div>
+                            <div class="array-items">${(Array.isArray(savedValue) ? savedValue : []).map(value => `<span class="array-item" data-value="${this.modal.viewer.escapeHtml(value)}">${this.modal.viewer.escapeHtml(value)} <button type="button" class="remove-item">×</button></span>`).join('')}</div>
                         </div>
                         <span class="form-hint">Press Enter to add each item</span>
                     </div>
@@ -230,7 +225,7 @@ class MiddlewareHandler {
                     <div class="form-group">
                         <label for="${fieldId}">${field.label} ${required}</label>
                         <input type="text" id="${fieldId}" name="${fieldName}" class="form-input ${requiredClass}" 
-                               placeholder="${field.placeholder || ''}">
+                               placeholder="${field.placeholder || ''}" value="${this.modal.viewer.escapeHtml(savedValue ?? '')}">
                     </div>
                 `;
         }
@@ -313,7 +308,7 @@ class MiddlewareHandler {
             item.draggable = true;
             item.innerHTML = `
                 <span class="chain-order-number">${index + 1}</span>
-                <span class="chain-order-name">${mwName}</span>
+                <span class="chain-order-name">${self.modal.viewer.escapeHtml(mwName)}</span>
                 <button type="button" class="chain-remove-btn" title="Remove">×</button>
             `;
             return item;
@@ -361,7 +356,7 @@ class MiddlewareHandler {
                     btn.type = 'button';
                     btn.className = 'chain-available-item';
                     btn.dataset.mw = mwName;
-                    btn.innerHTML = `<span>${mwName}</span><span class="chain-add-icon">+</span>`;
+                    btn.innerHTML = `<span>${self.modal.viewer.escapeHtml(mwName)}</span><span class="chain-add-icon">+</span>`;
                     availableList.appendChild(btn);
                     btn.addEventListener('click', () => addToChain(mwName));
                     
@@ -378,7 +373,7 @@ class MiddlewareHandler {
             const item = createOrderItem(mwName, index);
             orderList.appendChild(item);
             
-            const availableItem = availableList.querySelector(`[data-mw="${mwName}"]`);
+            const availableItem = [...availableList.querySelectorAll('[data-mw]')].find(item => item.dataset.mw === mwName);
             if (availableItem) availableItem.remove();
             
             bindItemEvents(item);
@@ -621,7 +616,8 @@ class MiddlewareHandler {
             type: 'middleware',
             name: name,
             middlewareType: mwType,
-            middlewareConfig: mwConfig
+            middlewareConfig: mwConfig,
+            revision: this.modal.viewer.revision
         };
     }
 
@@ -633,19 +629,23 @@ class MiddlewareHandler {
         }
 
         try {
-            const res = await fetch('/api/config/middleware', {
+            const res = await fetch(`/api/v1/config/${encodeURIComponent(config.protocol)}/middlewares/${encodeURIComponent(config.name)}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(config)
+                headers: { 'Content-Type': 'application/json', 'If-Match': config.revision || '' },
+                body: JSON.stringify({ data: { [config.middlewareType]: config.middlewareConfig }, revision: config.revision })
             });
 
             const result = await res.json();
 
             if (res.ok && result.success) {
-                this.showMiddlewareSuccess(config.name);
-
-                await this.modal.viewer.loadConfig();
+                this.modal.viewer.revision = result.revision || this.modal.viewer.revision;
+                const loaded = await this.modal.viewer.loadConfig();
+                if (!loaded || !this.modal.viewer.getSection(config.protocol, 'middlewares')[config.name]) {
+                    this.showMiddlewareError('The server accepted the middleware, but it was not present when the configuration was reloaded. Check the configured file path and server log.');
+                    return false;
+                }
                 this.modal.viewer.render();
+                this.showMiddlewareSuccess(config.name);
 
                 setTimeout(() => {
                     const footer = document.getElementById('modal-footer');
@@ -656,14 +656,17 @@ class MiddlewareHandler {
                         nextBtn.textContent = 'Next';
                     }
                     if (backBtn) backBtn.disabled = false;
-                    if (footer) footer.style.display = 'flex';
+                    if (footer) footer.hidden = false;
 
                     if (this.modal.formData.returnFromMiddleware) {
+                        const savedStep = this.modal.formData.savedRouterStep || 2;
+                        const routerDraft = this.modal.formData.routerDraft || { protocol: this.modal.protocol };
+                        const selected = Array.isArray(routerDraft.middlewares) ? routerDraft.middlewares : [];
+                        if (!selected.includes(config.name)) selected.push(config.name);
+                        routerDraft.middlewares = selected;
                         this.modal.configType = 'router';
-                        this.modal.currentStep = this.modal.formData.savedRouterStep || 2;
-                        delete this.modal.formData.returnFromMiddleware;
-                        delete this.modal.formData.savedRouterStep;
-                        this.resetMiddlewareData();
+                        this.modal.currentStep = savedStep;
+                        this.modal.formData = routerDraft;
                         this.modal.renderStep();
                     } else {
                         this.modal.currentStep = 1;
@@ -692,10 +695,10 @@ class MiddlewareHandler {
             <div class="success-message">
                 <div class="success-icon">✓</div>
                 <h3>Middleware Created!</h3>
-                <p>Your middleware "${name}" has been added successfully.</p>
+                <p>Your middleware "${this.modal.viewer.escapeHtml(name)}" has been added successfully.</p>
             </div>
         `;
-        footer.style.display = 'none';
+        footer.hidden = true;
     }
 
     showMiddlewareError(message) {

@@ -178,7 +178,7 @@ class DeleteManager {
 
     async performDeletion() {
         const { protocol, section, name } = this.context;
-        const queue = [];
+        const operations = [];
 
         if (section === 'routers') {
             const middlewares = Array.from(this.modal.querySelectorAll('input[data-delete-middleware]:checked'))
@@ -187,29 +187,25 @@ class DeleteManager {
             const deleteService = this.modal.querySelector('#delete-associated-service')?.checked;
             const router = this.viewer.getSection(protocol, 'routers')[name];
 
-            middlewares.forEach((mw) => queue.push({ protocol, section: 'middlewares', name: mw }));
+            // Delete the dependent router first, then its now-unreferenced
+            // dependencies, in one server-side transaction.
+            operations.push({ action: 'delete', protocol, section: 'routers', name });
+            middlewares.forEach((mw) => operations.push({ action: 'delete', protocol, section: 'middlewares', name: mw }));
             if (deleteService && router?.service) {
-                queue.push({ protocol, section: 'services', name: router.service });
+                operations.push({ action: 'delete', protocol, section: 'services', name: router.service });
             }
-            queue.push({ protocol, section: 'routers', name });
         } else {
-            queue.push({ protocol, section, name });
+            operations.push({ action: 'delete', protocol, section, name });
         }
 
-        for (const task of queue) {
-            this.status(`Deleting ${task.section.slice(0, -1)} "${task.name}"…`, 'info');
-            await this.deleteItem(task);
-        }
-    }
-
-    async deleteItem({ protocol, section, name }) {
-        const res = await fetch(`/api/config/${section}/${encodeURIComponent(name)}?protocol=${protocol}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' }
+        const res = await fetch('/api/v1/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'If-Match': this.viewer.revision || '' },
+            body: JSON.stringify({ operations, revision: this.viewer.revision })
         });
         const result = await res.json().catch(() => ({}));
         if (!res.ok || !result.success) {
-            throw new Error(result.error || `Failed to delete ${name}`);
+            throw new Error(result.error || 'Failed to delete selected resources');
         }
     }
 
